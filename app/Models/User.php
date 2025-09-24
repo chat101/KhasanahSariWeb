@@ -57,7 +57,7 @@ class User extends Authenticatable
         return [
             // Admin: semua grup & semua item (tidak batasi item)
             'admin' => [
-                'groups' => ['master data', 'gudang', 'purchasing', 'finance', 'produksi', 'laporan'],
+                'groups' => ['masterdata', 'gudang', 'purchasing', 'finance', 'produksi', 'laporan'],
                 'items'  => [], // kosong = semua item pada grup yang diizinkan
             ],
 

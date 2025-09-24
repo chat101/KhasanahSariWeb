@@ -57,6 +57,12 @@ use App\Livewire\Produksi\HasilDivisi;
 use App\Livewire\Produksi\HasilGiling;
 use App\Livewire\Produksi\HasilPoprok;
 
+
+
+Route::middleware(['auth']) // jika perlu
+    ->get('/admin/slides', \App\Livewire\Slides\Manage::class)
+    ->name('slides.manage');
+
     Route::get('/', function () {
         return view('welcome');
     })->name('home');

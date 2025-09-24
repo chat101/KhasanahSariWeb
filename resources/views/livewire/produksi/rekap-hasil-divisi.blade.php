@@ -71,7 +71,7 @@
                         <th class="px-3 py-2 text-center border-b border-gray-200 dark:border-zinc-700">Target
                         </th>
                         <th class="px-3 py-2 text-center border-b border-gray-200 dark:border-zinc-700">Giling</th>
-                        <th class="px-3 py-2 text-center border-b border-gray-200 dark:border-zinc-700">Counter</th>
+                        {{-- <th class="px-3 py-2 text-center border-b border-gray-200 dark:border-zinc-700">Counter</th> --}}
                         <th class="px-3 py-2 text-center border-b border-gray-200 dark:border-zinc-700">Poprok</th>
                         <th class="px-3 py-2 text-center border-b border-gray-200 dark:border-zinc-700">Dekor</th>
                     </tr>
@@ -96,9 +96,9 @@
                             <td class="td text-center">
                                 {{ number_format($produk->qty_giling, 0, ',', '.') }}
                             </td>
-                            <td class="td text-center">
+                            {{-- <td class="td text-center">
                                 {{ number_format($produk->qty_counter, 0, ',', '.') }}
-                            </td>
+                            </td> --}}
                             <td class="td text-center">
                                 {{ number_format($produk->qty_poprok, 0, ',', '.') }}
                             </td>

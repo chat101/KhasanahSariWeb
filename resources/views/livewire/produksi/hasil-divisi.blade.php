@@ -18,7 +18,7 @@
                 class="px-4 py-2 text-sm">
                 Hasil Giling
             </button>
-
+{{--
             <button @click="activeTab = 'counter'"
                 :class="activeTab === 'counter'
                     ?
@@ -27,7 +27,7 @@
                 class="px-4 py-2 text-sm">
                 Hasil Counter
 
-            </button>
+            </button> --}}
 
             <button @click="activeTab = 'poprok'"
                 :class="activeTab === 'poprok'

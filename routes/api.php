@@ -85,7 +85,8 @@ use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\HasilGilingController;
 use App\Http\Controllers\Api\HasilRejectController;
 use App\Http\Controllers\Api\SelesaiDivisiController;
-
+use App\Models\Slide;
+use App\Http\Controllers\Api\SlideController;
 // --- Public endpoints (no auth) ---
 Route::get('/ping', fn() => ['ok' => true]);
 
@@ -164,3 +165,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rejects/lists', [\App\Http\Controllers\Api\HasilRejectController::class, 'lists']);
 
 });
+Route::get('/slides', [SlideController::class, 'index']); // => /api/slides
