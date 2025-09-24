@@ -1,0 +1,142 @@
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-neutral-800);
+    --color-accent-content: var(--color-neutral-800);
+    --color-accent-foreground: var(--color-white);
+}
+
+@layer theme {
+    .dark {
+        --color-accent: var(--color-white);
+        --color-accent-content: var(--color-white);
+        --color-accent-foreground: var(--color-neutral-800);
+    }
+}
+
+@layer base {
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+[data-flux-field]:not(ui-radio) {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply  !mb-0 !leading-tight;
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+  .swal2-compact {
+      width: 240px !important;
+      padding: 0.75rem !important;
+      font-size: 0.75rem !important;
+      border-radius: 0.5rem !important;
+  }
+
+  .swal2-title-compact {
+      font-size: 0.85rem !important;
+      margin-bottom: 0.25rem !important;
+  }
+
+  .swal2-text-compact {
+      font-size: 0.75rem !important;
+  }
+
+         @keyframes fadeIn {
+             from {
+                 opacity: 0;
+             }
+    
+             to {
+                 opacity: 1;
+             }
+         }
+    
+         @keyframes zoomIn {
+             from {
+                 opacity: 0;
+                 transform: scale(0.95);
+             }
+    
+             to {
+                 opacity: 1;
+                 transform: scale(1);
+             }
+         }
+    
+         .animate-fadeIn {
+             animation: fadeIn 0.3s ease-out forwards;
+         }
+    
+         .animate-zoomIn {
+             animation: zoomIn 0.3s ease-out forwards;
+         }
+
+
+
+                 @keyframes fadeOut {
+                     from {
+                         opacity: 1;
+                     }
+        
+                     to {
+                         opacity: 0;
+                     }
+                 }
+        
+                 @keyframes zoomOut {
+                     from {
+                         opacity: 1;
+                         transform: scale(1);
+                     }
+        
+                     to {
+                         opacity: 0;
+                         transform: scale(0.95);
+                     }
+                 }
+        
+                 .animate-fadeOut {
+                     animation: fadeOut 0.3s ease-in forwards;
+                 }
+        
+                 .animate-zoomOut {
+                     animation: zoomOut 0.3s ease-in forwards;
+                 }
+/* \[:where(&)\]:size-4 {
+    @apply size-4;
+} */

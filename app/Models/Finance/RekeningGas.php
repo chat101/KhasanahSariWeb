@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Models\Finance;
+
+use Illuminate\Database\Eloquent\Model;
+
+class RekeningGas extends Model
+{
+    protected $table = 'rekening_gas';
+    protected $fillable = ['area','toko_id','jenis','bank','nama_rekening','no_rekening','keterangan'];
+    public function toko()
+    {
+        return $this->belongsTo(\App\Models\MasterToko::class, 'toko_id', 'id');
+    }
+}
