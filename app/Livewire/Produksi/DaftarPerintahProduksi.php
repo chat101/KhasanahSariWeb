@@ -8,9 +8,14 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Produksi\MasterProduct;
 use App\Models\Produksi\Produksi_Pengurangan;
 use App\Models\Produksi\Detail_Perintah_Produksi;
-
+use App\Models\User;
+use App\Models\UserPushToken;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http; // ← untuk call Expo API
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+
 class DaftarPerintahProduksi extends Component
 {
     use WithPagination;
@@ -138,7 +143,6 @@ class DaftarPerintahProduksi extends Component
 
             // Simpan pakai KEY = product id (bukan index) agar konsisten dengan Blade
             $this->produks[$pid] = $produk->toArray();
-
         }
     }
     public function simpanPengurangan(): void
@@ -153,7 +157,7 @@ class DaftarPerintahProduksi extends Component
             $this->dispatch('swal:error', 'perintah_produksi_id belum di-set.');
             return;
         }
-
+        $tanggalLabel = Carbon::parse($this->tanggalProduksi)->translatedFormat('d M Y');
         DB::beginTransaction();
         try {
             $productIds = array_values(array_unique(array_map(
@@ -218,6 +222,62 @@ class DaftarPerintahProduksi extends Component
             DB::rollBack();
             logger()->error('Gagal simpan produksi_pengurangan', ['error' => $e->getMessage()]);
             $this->dispatch('swal:error', 'Gagal simpan: ' . $e->getMessage());
+        }
+
+        // Kirim Expo push (dengan channelId + TTL) — di luar transaksi
+        $tokenList = UserPushToken::whereIn(
+            'user_id',
+            User::whereHas('pushTokens')->pluck('id')
+        )->pluck('expo_token')->unique()->values();
+
+        if ($tokenList->isNotEmpty()) {
+            try {
+                $tokenList->chunk(99)->each(function ($chunk) use ($perintahId, $ke, $tanggalLabel) {
+                    $messages = $chunk->map(fn($t) => [
+                        'to'        => $t,
+                        'title'     => 'Perintah Produksi – Pengurangan',
+                        'body'      => "Pengurangan ke-{$ke} untuk {$tanggalLabel}",
+                        'data'      => [
+                            'type'      => 'pp_extra',
+                            'pp_id'     => $perintahId,
+                            'extra_no'  => $ke,
+                            'date'      => $tanggalLabel,
+                        ],
+                        'priority'  => 'high',
+                        'channelId' => 'alerts',
+                        'ttl'       => 60 * 30,
+                    ])->values()->all();
+
+                    $res = Http::acceptJson()->asJson()
+                        ->post('https://exp.host/--/api/v2/push/send', $messages)
+                        ->throw()
+                        ->json();
+                    // $res = Http::acceptJson()->asJson()
+                    // ->post('https://exp.host/--/api/v2/push/send', $messages)
+                    // ->throw()
+                    // ->json();
+
+                    // Pruning token yang invalid
+                    if (isset($res['data']) && is_array($res['data'])) {
+                        foreach ($res['data'] as $i => $ticket) {
+                            if (($ticket['status'] ?? '') === 'error') {
+                                $err = $ticket['details']['error'] ?? '';
+                                if ($err === 'DeviceNotRegistered' || $err === 'MismatchSenderId') {
+                                    $badToken = $messages[$i]['to'] ?? null; // index sama dengan request
+                                    if ($badToken) {
+                                        \App\Models\UserPushToken::where('expo_token', $badToken)->delete();
+                                        Log::info('expo: pruned token', ['token' => $badToken, 'error' => $err]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Log::info('expo push pp_extra', ['result' => $res]);
+                });
+            } catch (\Throwable $ex) {
+                Log::error('expo push error (pp_extra)', ['err' => $ex->getMessage()]);
+            }
         }
     }
 

@@ -165,7 +165,7 @@ class PerintahProduksi extends Component
 
         // Ambil user target (kalau mau batasi role, aktifkan whereIn di bawah)
         $targetUserIds = \App\Models\User::query()
-            ->whereIn('role', ['adminproduksi', 'leaderproduksi'])
+            ->whereIn('role', ['admin','adminproduksi', 'leaderproduksi'])
             ->whereHas('pushTokens')
             // ->whereKeyNot(Auth::id())           // HAPUS saat test sendiri
             ->pluck('id');
@@ -392,7 +392,7 @@ class PerintahProduksi extends Component
             User::whereHas('pushTokens')->pluck('id')
         )->pluck('expo_token')->unique()->values();
 
-        if ($tokenList->isNotEmpty()) {
+           if ($tokenList->isNotEmpty()) {
             try {
                 $tokenList->chunk(99)->each(function ($chunk) use ($perintahId, $nextTambahanKe, $tanggalLabel) {
                     $messages = $chunk->map(fn($t) => [
@@ -414,10 +414,10 @@ class PerintahProduksi extends Component
                         ->post('https://exp.host/--/api/v2/push/send', $messages)
                         ->throw()
                         ->json();
-                        $res = Http::acceptJson()->asJson()
-                        ->post('https://exp.host/--/api/v2/push/send', $messages)
-                        ->throw()
-                        ->json();
+                        // $res = Http::acceptJson()->asJson()
+                        // ->post('https://exp.host/--/api/v2/push/send', $messages)
+                        // ->throw()
+                        // ->json();
 
                     // Pruning token yang invalid
                     if (isset($res['data']) && is_array($res['data'])) {

@@ -7,7 +7,10 @@ use Illuminate\Support\ServiceProvider;
 use App\Models\Produksi\Perintah_Produksi;
 use App\Observers\PerintahProduksiObserver;
 use App\Models\Produksi\Produksi_Tambahan;
+use App\Models\Produksi\Produksi_Pengurangan;
 use App\Observers\ProduksiTambahanObserver;
+use App\Observers\ProduksiPenguranganObserver;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -41,5 +44,6 @@ class AppServiceProvider extends ServiceProvider
 
         Perintah_Produksi::observe(PerintahProduksiObserver::class);
         Produksi_Tambahan::observe(ProduksiTambahanObserver::class);
+        Produksi_Pengurangan::observe(ProduksiPenguranganObserver::class);
     }
 }

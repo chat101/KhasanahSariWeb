@@ -87,6 +87,11 @@ use App\Http\Controllers\Api\HasilRejectController;
 use App\Http\Controllers\Api\SelesaiDivisiController;
 use App\Models\Slide;
 use App\Http\Controllers\Api\SlideController;
+use App\Http\Controllers\Api\PenguranganController;
+
+
+
+
 // --- Public endpoints (no auth) ---
 Route::get('/ping', fn() => ['ok' => true]);
 
@@ -101,6 +106,10 @@ Route::post('/selesai-divisi/row',  [SelesaiDivisiController::class, 'saveRow'])
 Route::post('/selesai-divisi/group', [SelesaiDivisiController::class, 'saveGroup']);
 
 Route::post('/auth/login',          [AuthController::class, 'login']);
+
+
+Route::get('/slides', [SlideController::class, 'index']); // => /api/slides
+
 
 // Debug echo (boleh dipertahankan saat dev)
 Route::post('/debug/echo', function (Request $r) {
@@ -165,4 +174,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rejects/lists', [\App\Http\Controllers\Api\HasilRejectController::class, 'lists']);
 
 });
-Route::get('/slides', [SlideController::class, 'index']); // => /api/slides
+Route::prefix('pengurangan')->group(function () {
+    Route::get('/',                [PenguranganController::class, 'index']); // riwayat (paging)
+    Route::post('/',               [PenguranganController::class, 'store']); // simpan batch
+    Route::get('/rekap',           [PenguranganController::class, 'pengurangan']);
+    Route::get('/max',             [PenguranganController::class, 'penguranganMax']);
+    Route::get('/summary',         [PenguranganController::class, 'summaryPengurangan']);
+    Route::get('/notify-overview', [PenguranganController::class, 'notifyOverviewPengurangan']);
+    Route::get('/load',            [PenguranganController::class, 'loadPengurangan']);
+});
