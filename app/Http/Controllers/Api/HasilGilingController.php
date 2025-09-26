@@ -102,6 +102,8 @@ class HasilGilingController extends Controller
         ?int $divisiId = null,
         ?int $baselineId = null
     ): array {
+            // ✅ Normalisasi: kalau 0, pakai 2
+    $effectiveDivisiId = ($divisiId === 0) ? 2 : $divisiId;
         // agregasi pengurangan & tambahan
         $subPengurangan = DB::table('produksi_pengurangan')
             ->selectRaw('mproducts_id, perintah_produksi_id,
@@ -119,10 +121,10 @@ class HasilGilingController extends Controller
 
         // agregasi realisasi per divisi (divisi yang sedang login/queried)
         $subRealisasi = DB::table('hasil_divisi')
-            ->selectRaw('perintah_produksi_id, mproducts_id, divisi_id, SUM(qty_hasil) AS qty_hasil')
-            ->where('perintah_produksi_id', $perintahId)
-            ->when($divisiId, fn ($q) => $q->where('divisi_id', $divisiId))
-            ->groupBy('perintah_produksi_id', 'mproducts_id', 'divisi_id');
+        ->selectRaw('perintah_produksi_id, mproducts_id, divisi_id, SUM(qty_hasil) AS qty_hasil')
+        ->where('perintah_produksi_id', $perintahId)
+        ->when($effectiveDivisiId, fn ($q) => $q->where('divisi_id', $effectiveDivisiId))
+        ->groupBy('perintah_produksi_id', 'mproducts_id', 'divisi_id');
 
         // agregasi realisasi baseline (mis. giling = 2)
         $subBaseline = DB::table('hasil_divisi')
@@ -180,19 +182,20 @@ class HasilGilingController extends Controller
 
         $rows = $q->get();
 
-        return $rows->map(function ($r) use ($divisiId, $baselineId) {
-            $realisasiDiv  = is_null($r->realisasi_divisi)   ? 0 : (int) $r->realisasi_divisi;
-            $realisasiBase = is_null($r->realisasi_baseline) ? 0 : (int) $r->realisasi_baseline;
-            $targetSisa    = (int) $r->sisa_target;
+       // gunakan effectiveDivisiId untuk logika display/selisih
+    return $rows->map(function ($r) use ($effectiveDivisiId, $baselineId) {
+        $realisasiDiv  = is_null($r->realisasi_divisi)   ? 0 : (int) $r->realisasi_divisi;
+        $realisasiBase = is_null($r->realisasi_baseline) ? 0 : (int) $r->realisasi_baseline;
+        $targetSisa    = (int) $r->sisa_target;
 
             // tampilan & selisih:
             // - jika divisi = baseline (atau baseline tidak diset): selisih = realisasiDiv - target
             // - jika divisi ≠ baseline: selisih = realisasiBaseline - realisasiDiv
-            if (!$baselineId || ($divisiId === $baselineId)) {
+            if (!$baselineId || ($effectiveDivisiId === $baselineId)) {
                 $realisasiDisplay = is_null($r->realisasi_divisi) ? null : $realisasiDiv;
                 $selisihDisplay   = $realisasiDiv - $targetSisa;
             } else {
-                $realisasiDisplay = $realisasiBase; // tampilkan angka giling
+                $realisasiDisplay = $realisasiBase; // tampilkan angka baseline (mis. giling)
                 $selisihDisplay   = $realisasiBase - $realisasiDiv;
             }
 
@@ -203,7 +206,7 @@ class HasilGilingController extends Controller
                 'target_giling'       => $targetSisa,
                 'realisasi_divisi'    => is_null($r->realisasi_divisi)   ? null : $realisasiDiv,
                 'realisasi_baseline'  => is_null($r->realisasi_baseline) ? null : $realisasiBase,
-                'realisasi'           => $realisasiDisplay, // FE pakai ini untuk display
+                'realisasi'           => $realisasiDisplay,
                 'selisih'             => (int) $selisihDisplay,
             ];
         })->toArray();
@@ -224,25 +227,34 @@ class HasilGilingController extends Controller
         if (!$userId) return response()->json(['message' => 'Unauthenticated.'], 401);
 
         $data = $request->validate([
-            'perintah_id'         => 'required|integer|exists:perintah_produksi,id',
-            'items'               => 'required|array|min:1',
-            'items.*.mproducts_id'=> 'required|integer|exists:mproducts,id',
-            'items.*.qty_hasil'   => 'required|integer|min:0',
-            'divisi_id'           => 'nullable|integer', // level root
-            'items.*.divisi_id'   => 'nullable|integer', // override per item
+            'perintah_id'            => 'required|integer|exists:perintah_produksi,id',
+            'items'                  => 'required|array|min:1',
+            'items.*.mproducts_id'   => 'required|integer|exists:mproducts,id',
+            'items.*.qty_hasil'      => 'required|integer|min:0',
+            'divisi_id'              => 'nullable|integer', // root (opsional)
+            'items.*.divisi_id'      => 'nullable|integer', // override per item (opsional)
         ]);
 
-        // ⚠️ Prioritas: pakai yang dikirim mobile; kalau kosong fallback user->divisi_id
+        // Prioritas: per item > root > user->divisi_id
         $rootDivisiId = $request->integer('divisi_id') ?? optional($request->user())->divisi_id;
+
+        // ⛔ PRE-CHECK: larang jika divisi_id kosong/0
+        foreach ($data['items'] as $i => $row) {
+            $resolvedDivisi = $row['divisi_id'] ?? $rootDivisiId;
+            if (is_null($resolvedDivisi) || (int)$resolvedDivisi === 0) {
+                return response()->json(['message' => 'Anda Tidak Punya Hak Untuk Input Hasil'], 403);
+            }
+        }
 
         DB::transaction(function () use ($data, $userId, $rootDivisiId) {
             foreach ($data['items'] as $row) {
                 $divisiId = $row['divisi_id'] ?? $rootDivisiId;
-                HasilDivisi::updateOrCreate(
+
+                \App\Models\Produksi\HasilDivisi::updateOrCreate(
                     [
-                        'perintah_produksi_id' => $data['perintah_id'],
+                        'perintah_produksi_id' => (int) $data['perintah_id'],
                         'mproducts_id'         => (int) $row['mproducts_id'],
-                        'divisi_id'            => (int) $divisiId,
+                        'divisi_id'            => (int) $divisiId, // kunci unik per divisi
                     ],
                     [
                         'qty_hasil' => (int) $row['qty_hasil'],
@@ -252,6 +264,10 @@ class HasilGilingController extends Controller
             }
         });
 
-        return response()->json(['message' => 'Realisasi giling tersimpan.', 'saved' => count($data['items'])]);
+        return response()->json([
+            'message' => 'Realisasi giling tersimpan.',
+            'saved'   => count($data['items']),
+        ]);
     }
+
 }

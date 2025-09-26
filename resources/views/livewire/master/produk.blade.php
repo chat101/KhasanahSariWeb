@@ -70,10 +70,14 @@
                             <td class="px-2 py-2">{{ $produk->metode }}</td>
                             <td class="px-2 py-2">{{ $produk->dekor }}</td>
                             <td>
-                                <ul class="list-disc list-inside text-xs ">
-                                    @foreach ($produk->jobs as $j)
-                                        <li>{{ $j['job']['nama_job'] }}</li>
-                                    @endforeach
+                                <ul class="list-disc list-inside text-xs">
+                                    @forelse ($produk->jobs as $j)
+                                        @if ($j->job)  {{-- skip if the related job is missing --}}
+                                            <li>{{ $j->job->nama_job }}</li>
+                                        @endif
+                                    @empty
+                                        <li class="italic text-gray-400">Belum ada job</li>
+                                    @endforelse
                                 </ul>
                             </td>
                             <td class="px-2 py-2 flex gap-1">

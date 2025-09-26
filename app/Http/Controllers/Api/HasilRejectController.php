@@ -36,12 +36,16 @@ class HasilRejectController extends Controller
             'divisi_id'    => ['nullable','integer'],
         ]);
 
-        $q = HasilReject::query()
-            ->where('perintah_produksi_id', $data['perintah_id'])
-            ->where('mproducts_id', $data['mproducts_id']);
+        // map: 0 -> 4, null = tanpa filter
+        $requestedDivisi   = array_key_exists('divisi_id', $data) ? (int)$data['divisi_id'] : null;
+        $effectiveDivisiId = is_null($requestedDivisi) ? null : (($requestedDivisi === 0) ? 4 : $requestedDivisi);
 
-        if (!empty($data['divisi_id'])) {
-            $q->where('divisi_id', (int)$data['divisi_id']);
+        $q = HasilReject::query()
+            ->where('perintah_produksi_id', (int)$data['perintah_id'])
+            ->where('mproducts_id', (int)$data['mproducts_id']);
+
+        if (!is_null($effectiveDivisiId)) {
+            $q->where('divisi_id', $effectiveDivisiId); // ← jika request 0, ini jadi 4
         }
 
         $rows = $q->leftJoin('listreject as lr', 'lr.id', '=', 'hasil_reject.listreject_id')
@@ -57,13 +61,14 @@ class HasilRejectController extends Controller
             ]);
 
         return response()->json([
-            'perintah_id'        => (int)$data['perintah_id'],
-            'mproducts_id'       => (int)$data['mproducts_id'],
-            'divisi_id'          => isset($data['divisi_id']) ? (int)$data['divisi_id'] : null,
-            'total_qty_reject'   => (int)$rows->sum('qty_reject'),
-            'data'               => $rows,
+            'perintah_id'      => (int)$data['perintah_id'],
+            'mproducts_id'     => (int)$data['mproducts_id'],
+            'divisi_id'        => $effectiveDivisiId,               // 4 jika request 0
+            'total_qty_reject' => (int)$rows->sum('qty_reject'),
+            'data'             => $rows,
         ]);
     }
+
 
     /**
      * POST /api/rejects
@@ -82,7 +87,13 @@ class HasilRejectController extends Controller
             'divisi_id'    => ['nullable','integer'],
         ]);
 
-        $rootDivisiId = (int)($base['divisi_id'] ?? optional($request->user())->divisi_id ?? 2);
+        // resolve rootDivisiId (0 berarti "tidak punya hak input")
+        $rootDivisiId = (int)($base['divisi_id'] ?? optional($request->user())->divisi_id ?? 0);
+
+        // ⛔ blokir input jika 0
+        if ($rootDivisiId === 0) {
+            return response()->json(['message' => 'Anda Tidak Punya Hak Untuk Input Hasil'], 403);
+        }
 
         // Mode multi-items
         if ($request->filled('items')) {
@@ -137,6 +148,7 @@ class HasilRejectController extends Controller
         ], 201);
     }
 
+
     /**
      * DELETE /api/rejects/{id}
      */
@@ -154,19 +166,25 @@ class HasilRejectController extends Controller
             'divisi_id'   => ['nullable','integer'],
         ]);
 
+        // map: 0 -> 4, null = tanpa filter
+        $requestedDivisi   = array_key_exists('divisi_id', $data) ? (int)$data['divisi_id'] : null;
+        $effectiveDivisiId = is_null($requestedDivisi) ? null : (($requestedDivisi === 0) ? 4 : $requestedDivisi);
+
         $rows = HasilReject::select(
                     'mproducts_id',
                     DB::raw('SUM(qty_reject) as qty'),
                     DB::raw('COUNT(*) as n')
                 )
-          ->where('perintah_produksi_id', $data['perintah_id'])
-          ->when($data['divisi_id'] ?? null, fn($q,$d)=>$q->where('divisi_id',$d))
-          ->groupBy('mproducts_id')
-          ->get();
+            ->where('perintah_produksi_id', (int)$data['perintah_id'])
+            ->when($effectiveDivisiId, fn($q,$d)=>$q->where('divisi_id',$d))
+            ->groupBy('mproducts_id')
+            ->get();
 
         return response()->json([
-          'perintah_id' => (int)$data['perintah_id'],
-          'data'        => $rows->keyBy('mproducts_id'),
+            'perintah_id' => (int)$data['perintah_id'],
+            'divisi_id'   => $effectiveDivisiId, // 4 jika request 0
+            'data'        => $rows->keyBy('mproducts_id'),
         ]);
     }
+
 }

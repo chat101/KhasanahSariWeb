@@ -229,6 +229,13 @@
                             {{ __('Produksi Mingguan') }}
                         </flux:navlist.item>
                     @endmenuitem
+                    @menuitem('LAPORAN', 'lap-prod-hari')
+                    <flux:navlist.item icon="home" :href="route('lap-prod-hari')"
+                        :current="request()->routeIs('lap-prod-minggu')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Produksi Harian') }}
+                    </flux:navlist.item>
+                @endmenuitem
                     @menuitem('LAPORAN', 'ketepatanwkt')
                         <flux:navlist.item icon="home" :href="route('ketepatanwkt')"
                             :current="request()->routeIs('ketepatanwkt')" wire:navigate

@@ -56,8 +56,7 @@ use App\Livewire\Produksi\Laporan\LaporanHasilProduksi;
 use App\Livewire\Produksi\HasilDivisi;
 use App\Livewire\Produksi\HasilGiling;
 use App\Livewire\Produksi\HasilPoprok;
-
-
+use App\Livewire\Produksi\Laporan\LapHarian;
 
 Route::middleware(['auth']) // jika perlu
     ->get('/admin/slides', \App\Livewire\Slides\Manage::class)
@@ -107,6 +106,7 @@ Route::middleware(['auth']) // jika perlu
     //laporan produksi
     Route::get('lap-has-prod', LaporanHasilProduksi::class)->name('lap-has-prod');
     Route::get('lap-prod-minggu', ProduksiMingguan::class)->name('lap-prod-minggu');
+    Route::get('lap-prod-hari', LapHarian::class)->name('lap-prod-hari');
     Route::get('opname-penyesuaian', OpnamePenyesuaian::class)->name('opnamepenyesuaian');
     Route::get('ketepatanwkt', LaporanJamSelesai::class)->name('ketepatanwkt');
     Route::get('ketepatanwktbln', JamSelesaiBulanan::class)->name('ketepatanwktbln');

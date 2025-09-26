@@ -137,9 +137,9 @@
                 <td class="text-center border-t border-gray-200 dark:border-zinc-700">
                   {{ number_format($totalGiling, 0, ',', '.') }}
                 </td>
-                <td class="text-center border-t border-gray-200 dark:border-zinc-700">
+                {{-- <td class="text-center border-t border-gray-200 dark:border-zinc-700">
                   {{ number_format($totalCounter, 0, ',', '.') }}
-                </td>
+                </td> --}}
                 <td class="text-center border-t border-gray-200 dark:border-zinc-700">
                   {{ number_format($totalPoprok, 0, ',', '.') }}
                 </td>
