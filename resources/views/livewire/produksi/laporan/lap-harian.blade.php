@@ -62,17 +62,17 @@
           <table class="w-full border border-gray-300 text-xs">
             <thead>
               <tr class="bg-yellow-400 text-black text-center font-bold">
-                <th class="border border-gray-300 px-2 py-1">NO</th>
-                <th class="border border-gray-300 px-2 py-1">ID</th>
-                <th class="border border-gray-300 px-2 py-1">NAMA PRODUK</th>
-                <th class="border border-gray-300 px-2 py-1">TARGET GILING</th>
-                <th class="border border-gray-300 px-2 py-1">PATOKAN</th>
-                <th class="border border-gray-300 px-2 py-1">HASIL GILING</th>
-                <th class="border border-gray-300 px-2 py-1">HASIL REAL</th>
-                <th class="border border-gray-300 px-2 py-1">SELISIH HASIL</th>
-                <th class="border border-gray-300 px-2 py-1">HASIL DEKOR</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">NO</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">ID</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">NAMA PRODUK</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">TARGET GILING</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">PATOKAN</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">HASIL GILING</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">HASIL REAL</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">SELISIH HASIL</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">HASIL DEKOR</th>
                 <th class="border border-gray-300 px-2 py-1">REJECT PRODUKSI</th>
-                <th class="border border-gray-300 px-2 py-1">KETERANGAN</th>
+                <th rowspan="2" class="border border-gray-300 px-2 py-1">KETERANGAN</th>
               </tr>
             </thead>
 
@@ -82,11 +82,8 @@
                   <td class="border border-gray-300 px-2 py-1 text-center">{{ $i + 1 }}</td>
                   <td class="border border-gray-300 px-2 py-1 text-center">{{ $item['id'] ?? '' }}</td>
                   <td class="border border-gray-300 px-2 py-1">{{ $item['nama_produk'] ?? '-' }}</td>
-                  <td class="border border-gray-300 px-2 py-1">TONG</td>
-                  <td class="border border-gray-300 px-2 py-1">PATOKAN</td>
-
-                  <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['target_giling'] ?? 0) }}</td>
-                  <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['patokan'] ?? 0) }}</td>
+                  <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['total_tong'] ?? 0) }}</td>
+                  <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['patokan_produk'] ?? 0) }}</td>
                   <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['total_target'] ?? 0) }}</td>
                   <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['hasil_real'] ?? 0) }}</td>
                   <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['selisih_hasil'] ?? 0) }}</td>

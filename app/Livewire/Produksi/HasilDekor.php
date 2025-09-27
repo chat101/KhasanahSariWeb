@@ -161,7 +161,7 @@ class HasilDekor extends Component
                     [
                         'perintah_produksi_id' => $this->perintah_id,
                         'mproducts_id'         => $row->mproducts_id,
-                        'divisi_id' => 7,
+                        'divisi_id' => 4,
 
                     ],
                     [
