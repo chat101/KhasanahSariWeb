@@ -19,4 +19,9 @@ class HasilReject extends Model
     ];
 
     public $timestamps = true;
+
+    public function listreject()
+    {
+        return $this->belongsTo(ListReject::class, 'listreject_id', 'id');
+    }
 }

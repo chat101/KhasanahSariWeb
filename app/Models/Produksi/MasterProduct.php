@@ -2,6 +2,7 @@
 
 namespace App\Models\Produksi;
 
+use App\Models\Produksi\Machine;
 use Illuminate\Database\Eloquent\Model;
 
 class MasterProduct extends Model
@@ -44,4 +45,11 @@ class MasterProduct extends Model
     {
         return $this->hasMany(\App\Models\Produksi\HasilGiling::class, 'mproducts_id', 'id');
     }
+      // Relasi many-to-many ke mesin
+      public function machines()
+      {
+          return $this->belongsToMany(Machine::class, 'machine_product', 'mproduct_id', 'machine_id')
+                      ->withPivot(['kapasitas_per_jam', 'waktu_setup_menit', 'is_active'])
+                      ->withTimestamps();
+      }
 }

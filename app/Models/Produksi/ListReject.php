@@ -12,4 +12,9 @@ class ListReject extends Model
         'created_at',
         'updated_at',
     ];
+
+    public function hasilReject()
+    {
+        return $this->hasMany(HasilReject::class, 'listreject_id'); // ✅ Sesuai nama kolom sebenarnya
+    }
 }

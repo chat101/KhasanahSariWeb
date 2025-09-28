@@ -71,9 +71,18 @@
                 <th rowspan="2" class="border border-gray-300 px-2 py-1">HASIL REAL</th>
                 <th rowspan="2" class="border border-gray-300 px-2 py-1">SELISIH HASIL</th>
                 <th rowspan="2" class="border border-gray-300 px-2 py-1">HASIL DEKOR</th>
-                <th class="border border-gray-300 px-2 py-1">REJECT PRODUKSI</th>
+                <th colspan="2" class="border border-gray-300 px-2 py-1">REJECT PRODUKSI</th>
                 <th rowspan="2" class="border border-gray-300 px-2 py-1">KETERANGAN</th>
               </tr>
+              <tr class="bg-sky-700 text-white">
+                <th class="border border-gray-300 px-2 py-1 text-center">
+                  REJECT / RETUR PRODUKSI
+                </th>
+                <th class="border border-gray-300 px-2 py-1 text-center">
+                  KETERANGAN REJECT
+                </th>
+              </tr>
+
             </thead>
 
             <tbody>
@@ -89,7 +98,17 @@
                   <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['selisih_hasil'] ?? 0) }}</td>
                   <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['hasil_dekor'] ?? 0) }}</td>
                   <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['reject'] ?? 0) }}</td>
-                  <td class="border border-gray-300 px-2 py-1">{{ $item['keterangan'] ?? '' }}</td>
+                  <td class="border border-gray-300 px-2 py-1"><ul class="list-disc pl-4">
+                    @forelse(($item['reject_detail'] ?? []) as $label => $jumlah)
+                      @if($jumlah > 0)
+                        <li>{{ $label }} = {{ $jumlah }}</li>
+                      @endif
+                    @empty
+                      <li>-</li>
+                    @endforelse
+                  </ul></td>
+                  <td class="border border-gray-300 px-2 py-1">{{ $item['keterangan_reject'] ?? '' }}</td>
+
                 </tr>
               @empty
                 <tr>

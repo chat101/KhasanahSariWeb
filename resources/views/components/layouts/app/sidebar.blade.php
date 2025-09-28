@@ -55,7 +55,12 @@
               <flux:navlist.item icon="home" :href="route('slides.manage')" :current="request()->routeIs('slides.manage')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                 {{ __('Master Slide') }}
               </flux:navlist.item>
-            @endmenuitem
+              @endmenuitem
+              @menuitem('masterdata', 'mesintoproduk')
+              <flux:navlist.item icon="home" :href="route('mesintoproduk')" :current="request()->routeIs('mesintoproduk')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                {{ __('Setting Produk Ke Mesin') }}
+              </flux:navlist.item>
+              @endmenuitem
             </flux:navlist.group>
           @endmenugroup
             {{-- Grup Gudang --}}
