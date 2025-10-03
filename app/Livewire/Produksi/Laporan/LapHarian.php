@@ -256,10 +256,10 @@ public function getProduksiProperty(): array
             DB::raw('COALESCE(SUM(hd2.qty_hasil_div2),0) AS qty_hasil_div2'),
             DB::raw('COALESCE(SUM(hd4.qty_hasil_div4),0) AS qty_hasil_div4'),
             DB::raw('COALESCE(SUM(hr.qty_reject),0)      AS qty_reject'),
-            DB::raw('COALESCE(ANY_VALUE(hr.listreject_keterangan), "")  AS listreject_keterangan'),
-            DB::raw('COALESCE(ANY_VALUE(hr.listreject_all), "")          AS listreject_all'),
-            DB::raw('COALESCE(ANY_VALUE(hr.keterangan_reject), "")       AS keterangan_reject'),
-            DB::raw('COALESCE(ANY_VALUE(hr.keterangan_reject_all), "")   AS keterangan_reject_all'),
+            DB::raw('COALESCE(MAX(hr.listreject_keterangan), "")  AS listreject_keterangan'),
+            DB::raw('COALESCE(MAX(hr.listreject_all), "")          AS listreject_all'),
+            DB::raw('COALESCE(MAX(hr.keterangan_reject), "")       AS keterangan_reject'),
+            DB::raw('COALESCE(MAX(hr.keterangan_reject_all), "")   AS keterangan_reject_all'),
             DB::raw('
                 (COALESCE(SUM(dpp.target_produksi),0)
                  + COALESCE(SUM(pt.target_qty_tambahan),0)

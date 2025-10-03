@@ -3,6 +3,7 @@
 namespace App\Models\Produksi;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Produksi\HasilRejectPhoto;
 
 class HasilReject extends Model
 {
@@ -23,5 +24,10 @@ class HasilReject extends Model
     public function listreject()
     {
         return $this->belongsTo(ListReject::class, 'listreject_id', 'id');
+    }
+    // app/Models/HasilReject.php
+    public function photos()
+    {
+        return $this->hasMany(HasilRejectPhoto::class);
     }
 }

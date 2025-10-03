@@ -68,7 +68,7 @@ class User extends Authenticatable
                 'groups' => ['masterdata','produksi', 'laporan'],
                 'items'  => [
                     'masterdata' => ['mproduk'],
-                    'laporan' => ['lap-has-prod', 'lap-prod-minggu', 'ketepatanwkt', 'ketepatanwktbln'],
+                    'laporan' => ['lap-has-prod', 'lap-prod-minggu', 'ketepatanwkt', 'ketepatanwktbln','lap-prod-hari'],
 
                      // <- route names
                   // 'laporan'  => ['lap-has-prod','lap-prod-minggu'],
