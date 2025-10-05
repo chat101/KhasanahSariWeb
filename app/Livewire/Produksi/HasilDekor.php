@@ -103,7 +103,7 @@ class HasilDekor extends Component
             ->leftJoin('hasil_divisi as hd', function ($j) {
                 $j->on('hd.mproducts_id', '=', 'mp.id')
                     ->where('hd.perintah_produksi_id', '=', $this->perintah_id)
-                    ->where('hd.divisi_id', '=', 7);   // ✅ filter divisi
+                    ->where('hd.divisi_id', '=', 4);   // ✅ filter divisi
             })
             ->whereRaw('
         (COALESCE(dpp.produksi_qty,0)

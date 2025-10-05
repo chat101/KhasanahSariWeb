@@ -5,6 +5,8 @@ namespace App\Livewire\Produksi\Laporan;
 use Livewire\Component;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;   // ✅ tambahkan
+use Illuminate\Support\Str;               // ✅ tambahkan
 
 class LapHarian extends Component
 {
@@ -222,16 +224,38 @@ public function getProduksiProperty(): array
         ->where('divisi_id', 4)
         ->groupBy('perintah_produksi_id', 'mproducts_id');
 
-    $subReject = DB::table('hasil_reject as hr')
+    // --- REJECT ---
+    // (a) sum qty_reject per (perintah, produk, label) → pairs "label|qty"
+    $subRejectByLabel = DB::table('hasil_reject as hr')
         ->leftJoin('listreject as lr', 'lr.id', '=', 'hr.listreject_id')
         ->selectRaw('
             hr.perintah_produksi_id,
             hr.mproducts_id,
-            SUM(hr.qty_reject) AS qty_reject,
-            GROUP_CONCAT(DISTINCT NULLIF(TRIM(lr.keterangan), "") ORDER BY lr.keterangan SEPARATOR ", ") AS listreject_keterangan,
-            GROUP_CONCAT(NULLIF(TRIM(lr.keterangan), "") ORDER BY lr.keterangan SEPARATOR ",") AS listreject_all,
-            GROUP_CONCAT(DISTINCT NULLIF(TRIM(hr.keterangan), "") ORDER BY hr.keterangan SEPARATOR ", ") AS keterangan_reject,
-            GROUP_CONCAT(NULLIF(TRIM(hr.keterangan), "") ORDER BY hr.keterangan SEPARATOR ",") AS keterangan_reject_all
+            COALESCE(NULLIF(TRIM(lr.keterangan), ""), "-") AS label,
+            SUM(hr.qty_reject) AS qty
+        ')
+        ->groupBy('hr.perintah_produksi_id', 'hr.mproducts_id', 'label');
+
+    $subRejectPairs = DB::query()
+        ->fromSub($subRejectByLabel, 'rb')
+        ->selectRaw('
+            rb.perintah_produksi_id,
+            rb.mproducts_id,
+            SUM(rb.qty) AS qty_reject,
+            GROUP_CONCAT(CONCAT(rb.label, "|", rb.qty) ORDER BY rb.label SEPARATOR ",") AS reject_pairs
+        ')
+        ->groupBy('rb.perintah_produksi_id', 'rb.mproducts_id');
+
+    // (b) kumpulkan teks keterangan & daftar label (DISTINCT) → tidak untuk sum
+    $subRejectText = DB::table('hasil_reject as hr')
+        ->leftJoin('listreject as lr', 'lr.id', '=', 'hr.listreject_id')
+        ->selectRaw('
+            hr.perintah_produksi_id,
+            hr.mproducts_id,
+            GROUP_CONCAT(DISTINCT NULLIF(TRIM(lr.keterangan), "")
+                ORDER BY lr.keterangan SEPARATOR ", ") AS listreject_keterangan,
+            GROUP_CONCAT(DISTINCT NULLIF(TRIM(hr.keterangan), "")
+                ORDER BY hr.keterangan SEPARATOR ", ") AS keterangan_reject
         ')
         ->groupBy('hr.perintah_produksi_id', 'hr.mproducts_id');
 
@@ -242,7 +266,8 @@ public function getProduksiProperty(): array
         ->leftJoinSub($subPengurangan,'pg',  fn($j) => $j->on('pg.perintah_produksi_id', '=', 'pp.id')->on('pg.mproducts_id', '=', 'dpp.mproducts_id'))
         ->leftJoinSub($subHasilDivisi2,'hd2', fn($j) => $j->on('hd2.perintah_produksi_id', '=', 'pp.id')->on('hd2.mproducts_id', '=', 'dpp.mproducts_id'))
         ->leftJoinSub($subHasilDivisi4,'hd4', fn($j) => $j->on('hd4.perintah_produksi_id', '=', 'pp.id')->on('hd4.mproducts_id', '=', 'dpp.mproducts_id'))
-        ->leftJoinSub($subReject,     'hr',  fn($j) => $j->on('hr.perintah_produksi_id', '=', 'pp.id')->on('hr.mproducts_id', '=', 'dpp.mproducts_id'))
+        ->leftJoinSub($subRejectPairs, 'hrp', fn($j) => $j->on('hrp.perintah_produksi_id', '=', 'pp.id')->on('hrp.mproducts_id', '=', 'dpp.mproducts_id'))
+        ->leftJoinSub($subRejectText,  'hrt', fn($j) => $j->on('hrt.perintah_produksi_id', '=', 'pp.id')->on('hrt.mproducts_id', '=', 'dpp.mproducts_id'))
         ->whereDate('pp.tanggal_perintah', $tanggal)
         ->groupBy('dpp.mproducts_id')
         ->select([
@@ -255,11 +280,15 @@ public function getProduksiProperty(): array
             DB::raw('COALESCE(SUM(pg.target_qty_pengurangan),0) AS target_pengurangan'),
             DB::raw('COALESCE(SUM(hd2.qty_hasil_div2),0) AS qty_hasil_div2'),
             DB::raw('COALESCE(SUM(hd4.qty_hasil_div4),0) AS qty_hasil_div4'),
-            DB::raw('COALESCE(SUM(hr.qty_reject),0)      AS qty_reject'),
-            DB::raw('COALESCE(MAX(hr.listreject_keterangan), "")  AS listreject_keterangan'),
-            DB::raw('COALESCE(MAX(hr.listreject_all), "")          AS listreject_all'),
-            DB::raw('COALESCE(MAX(hr.keterangan_reject), "")       AS keterangan_reject'),
-            DB::raw('COALESCE(MAX(hr.keterangan_reject_all), "")   AS keterangan_reject_all'),
+
+            // dari pairs: total qty + pairs
+            DB::raw('COALESCE(SUM(hrp.qty_reject),0) AS qty_reject'),
+            DB::raw('COALESCE(MAX(hrp.reject_pairs), "") AS reject_pairs'),
+
+            // dari text: label readable & keterangan reject (DISTINCT)
+            DB::raw('COALESCE(MAX(hrt.listreject_keterangan), "") AS listreject_keterangan'),
+            DB::raw('COALESCE(MAX(hrt.keterangan_reject), "") AS keterangan_reject'),
+
             DB::raw('
                 (COALESCE(SUM(dpp.target_produksi),0)
                  + COALESCE(SUM(pt.target_qty_tambahan),0)
@@ -275,7 +304,6 @@ public function getProduksiProperty(): array
         ->leftJoin('machine_product AS mpiv', 'mpiv.mproduct_id', '=', 'mp.id')
         ->leftJoin('machines AS m', 'm.id', '=', 'mpiv.machine_id')
         ->leftJoinSub($agg, 'ag', fn($j) => $j->on('ag.product_id', '=', 'mp.id'))
-          // ✅ urutan ASC: id mesin → nama produk, produk tanpa mesin di bawah
         ->orderByRaw('CASE WHEN m.id IS NULL THEN 1 ELSE 0 END')
         ->orderBy('m.id', 'asc')
         ->orderBy('mp.nama', 'asc')
@@ -289,9 +317,13 @@ public function getProduksiProperty(): array
             DB::raw('COALESCE(ag.target_total,0) AS target_total'),
             DB::raw('COALESCE(ag.qty_hasil_div2,0) AS qty_hasil_div2'),
             DB::raw('COALESCE(ag.qty_hasil_div4,0) AS qty_hasil_div4'),
+
+            // reject total & pairs
             DB::raw('COALESCE(ag.qty_reject,0) AS qty_reject'),
+            DB::raw('COALESCE(ag.reject_pairs,"") AS reject_pairs'),
+
+            // teks keterangan & daftar label (readable)
             DB::raw('COALESCE(ag.listreject_keterangan,"") AS listreject_keterangan'),
-            DB::raw('COALESCE(ag.listreject_all,"") AS listreject_all'),
             DB::raw('COALESCE(ag.keterangan_reject,"") AS keterangan_reject'),
         ]);
 
@@ -300,33 +332,45 @@ public function getProduksiProperty(): array
         $hasilDekor  = (int) $r->qty_hasil_div4;
         $selisih     = $hasilGiling - (int) $r->target_total;
 
+        // Parsing "label|qty,label|qty,..."
         $rejectDetail = [];
-        $raw = (string) ($r->listreject_all ?? '');
-        if ($raw !== '') {
-            $labels = array_filter(array_map('trim', explode(',', $raw)), fn($x) => $x !== '');
-            if ($labels) {
-                $rejectDetail = array_count_values($labels);
-                ksort($rejectDetail);
+        $pairs = (string) ($r->reject_pairs ?? '');
+        if ($pairs !== '') {
+            foreach (explode(',', $pairs) as $pair) {
+                [$label, $qty] = array_pad(explode('|', $pair, 2), 2, 0);
+                $label = trim((string)$label);
+                $qty   = (int)$qty;
+                if ($label === '') { $label = '-'; }
+                $rejectDetail[$label] = ($rejectDetail[$label] ?? 0) + $qty;
             }
+            ksort($rejectDetail);
         }
 
         return [
-            'id'              => (int) $r->product_id,
-            'nama_produk'     => (string) $r->nama_produk,
-            'patokan_produk'  => (int) $r->patokan_produk,
-            'mesin_nama'      => (string)($r->mesin_nama ?? 'Tanpa Mesin'),
-            'total_tong'      => (int) $r->total_tong,
-            'total_target'    => (int) $r->target_total,
-            'hasil_real'      => $hasilGiling,
-            'hasil_dekor'     => $hasilDekor,
-            'selisih_hasil'   => $selisih,
-            'reject'          => (int) $r->qty_reject,
-            'listreject_keterangan' => (string) $r->listreject_keterangan,
-            'keterangan_reject'     => (string) $r->keterangan_reject,
-            'reject_detail'         => $rejectDetail,
+            'id'                      => (int) $r->product_id,
+            'nama_produk'             => (string) $r->nama_produk,
+            'patokan_produk'          => (int) $r->patokan_produk,
+            'mesin_nama'              => (string)($r->mesin_nama ?? 'Tanpa Mesin'),
+            'total_tong'              => (int) $r->total_tong,
+            'total_target'            => (int) $r->target_total,
+            'hasil_real'              => $hasilGiling,
+            'hasil_dekor'             => $hasilDekor,
+            'selisih_hasil'           => $selisih,
+
+            // reject total & per label
+            'reject'                  => (int) $r->qty_reject,
+            'reject_detail'           => $rejectDetail,
+
+            // ✅ teks tetap ada
+            'listreject_keterangan'   => (string) $r->listreject_keterangan,
+            'keterangan_reject'       => (string) $r->keterangan_reject,
         ];
-    })->values()->all();
+    })
+    ->filter(fn ($item) => $item['hasil_real'] > 0) // hanya tampilkan yang hasil_real > 0
+    ->values()->all();
 }
+
+
 
 
     /** Computed: total untuk baris "TOTAL MESIN" */
@@ -350,4 +394,5 @@ public function getProduksiProperty(): array
             'total'    => $this->total,    // computed
         ]);
     }
+
 }

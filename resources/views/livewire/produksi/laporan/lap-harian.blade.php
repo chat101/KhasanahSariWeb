@@ -109,7 +109,10 @@
                       <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format((int)($item['hasil_real'] ?? 0)) }}</td>
 
                       {{-- SELISIH --}}
-                      <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format((int)($item['selisih_hasil'] ?? 0)) }}</td>
+                      <td class="border border-gray-300 px-2 py-1 text-right
+                      {{ ($item['selisih_hasil'] ?? 0) < 0 ? 'text-red-600 font-bold' : '' }}">
+                      {{ number_format((int)($item['selisih_hasil'] ?? 0)) }}
+                  </td>
 
                       {{-- HASIL DEKOR --}}
                       <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format((int)($item['hasil_dekor'] ?? 0)) }}</td>
@@ -120,13 +123,14 @@
                       {{-- KETERANGAN REJECT --}}
                       <td class="border border-gray-300 px-2 py-1">
                         <ul class="list-disc pl-4">
-                          @forelse(($item['reject_detail'] ?? []) as $label => $jumlah)
+                            @forelse(($item['reject_detail'] ?? []) as $label => $jumlah)
                             @if($jumlah > 0)
-                              <li>{{ $label }} = {{ $jumlah }}</li>
+                                <li>{{ $label }} = {{ $jumlah }}</li>
                             @endif
-                          @empty
+                        @empty
                             <li>-</li>
-                          @endforelse
+                        @endforelse
+
                         </ul>
                       </td>
 
@@ -136,18 +140,18 @@
                   @endforeach
 
                   {{-- SUBTOTAL Mesin --}}
-                  <tr class="bg-green-200 font-bold">
-                    <td colspan="3" class="border border-gray-300 px-2 py-1 text-center">
+                  <tr class="bg-green-200 font-bold text-black ">
+                    <td colspan="5" class="border border-gray-300 px-2 py-1 text-center">
                       TOTAL MESIN {{ strtoupper($mesinNama) }}
                     </td>
-                    <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($rows->sum('total_tong')) }}</td>
+                    <td class="border border-gray-300 px-2 py-1 text-right ">{{ number_format($rows->sum('total_tong')) }}</td>
                     <td class="border border-gray-300 px-2 py-1 text-right">—</td>
                     <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($rows->sum('total_target')) }}</td>
                     <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($rows->sum('hasil_real')) }}</td>
                     <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($rows->sum('selisih_hasil')) }}</td>
                     <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($rows->sum('hasil_dekor')) }}</td>
                     <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($rows->sum('reject')) }}</td>
-                    <td colspan="2" class="border border-gray-300">—</td>
+
                   </tr>
 
                   @php $noMesin++; @endphp

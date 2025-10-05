@@ -97,7 +97,7 @@ class RekapHasilDivisi extends Component
                 hd.perintah_produksi_id,
                 SUM(CASE WHEN hd.divisi_id = 2 THEN hd.qty_hasil ELSE 0 END) AS qty_giling,
                 SUM(CASE WHEN hd.divisi_id = 6 THEN hd.qty_hasil ELSE 0 END) AS qty_poprok,
-                SUM(CASE WHEN hd.divisi_id = 7 THEN hd.qty_hasil ELSE 0 END) AS qty_dekor
+                SUM(CASE WHEN hd.divisi_id = 4 THEN hd.qty_hasil ELSE 0 END) AS qty_dekor
             ")
             ->where('hd.perintah_produksi_id', $this->perintah_id)
             ->groupBy('hd.mproducts_id','hd.perintah_produksi_id');
