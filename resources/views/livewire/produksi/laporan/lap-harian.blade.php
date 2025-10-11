@@ -160,6 +160,30 @@
                     <td colspan="14" class="text-center text-gray-500 py-2">Tidak ada data</td>
                   </tr>
                 @endforelse
+                      {{-- GRAND TOTAL --}}
+                @php
+                $grandTotalTong   = $all->sum('total_tong');
+                $grandTotalTarget = $all->sum('total_target');
+                $grandHasilReal   = $all->sum('hasil_real');
+                $grandSelisih     = $all->sum('selisih_hasil');
+                $grandHasilDekor  = $all->sum('hasil_dekor');
+                $grandReject      = $all->sum('reject');
+            @endphp
+
+            <tr class="bg-yellow-400 text-black font-extrabold uppercase">
+              <td colspan="5" class="border border-gray-400 px-2 py-2 text-center">
+                GRAND TOTAL SELURUH MESIN
+              </td>
+              <td class="border border-gray-400 px-2 py-2 text-right">{{ number_format($grandTotalTong) }}</td>
+              <td class="border border-gray-400 px-2 py-2 text-right">—</td>
+              <td class="border border-gray-400 px-2 py-2 text-right">{{ number_format($grandTotalTarget) }}</td>
+              <td class="border border-gray-400 px-2 py-2 text-right">{{ number_format($grandHasilReal) }}</td>
+              <td class="border border-gray-400 px-2 py-2 text-right">{{ number_format($grandSelisih) }}</td>
+              <td class="border border-gray-400 px-2 py-2 text-right">{{ number_format($grandHasilDekor) }}</td>
+              <td class="border border-gray-400 px-2 py-2 text-right">{{ number_format($grandReject) }}</td>
+              <td colspan="2" class="border border-gray-400 px-2 py-2 text-center">—</td>
+            </tr>
+
               </tbody>
 
 
