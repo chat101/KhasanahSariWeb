@@ -4,6 +4,7 @@ namespace App\Models\Produksi;
 
 use App\Models\Produksi\HasilReject;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class HasilRejectPhoto extends Model
 {
@@ -23,8 +24,22 @@ class HasilRejectPhoto extends Model
 
     ];
 
-    public function reject()
-    {
-        return $this->belongsTo(HasilReject::class, 'hasil_reject_id');
-    }
+      // helper akses url; fallback kalau kolom url kosong
+      public function getPublicUrlAttribute(): string
+      {
+          if (!empty($this->url)) {
+              return (string) $this->url;
+          }
+          if (empty($this->path)) {
+              return '';
+          }
+          return asset('storage/' . ltrim($this->path, '/'));
+      }
+
+
+      // relasi balik (opsional)
+      public function hasilReject()
+      {
+          return $this->belongsTo(HasilReject::class);
+      }
 }

@@ -75,19 +75,20 @@
 // });
 
 
+use App\Models\Slide;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\SlideController;
 use App\Http\Controllers\Api\NotifyController;
 use App\Http\Controllers\Api\ProduksController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\HasilGilingController;
 use App\Http\Controllers\Api\HasilRejectController;
-use App\Http\Controllers\Api\SelesaiDivisiController;
-use App\Models\Slide;
-use App\Http\Controllers\Api\SlideController;
 use App\Http\Controllers\Api\PenguranganController;
+use App\Http\Controllers\Api\RejectPhotoController;
+use App\Http\Controllers\Api\SelesaiDivisiController;
 
 
 
@@ -183,3 +184,4 @@ Route::prefix('pengurangan')->group(function () {
     Route::get('/notify-overview', [PenguranganController::class, 'notifyOverviewPengurangan']);
     Route::get('/load',            [PenguranganController::class, 'loadPengurangan']);
 });
+Route::middleware(['auth:sanctum'])->post('/rejects/photos', [RejectPhotoController::class, 'store']);
