@@ -89,7 +89,7 @@ use App\Http\Controllers\Api\HasilRejectController;
 use App\Http\Controllers\Api\PenguranganController;
 use App\Http\Controllers\Api\RejectPhotoController;
 use App\Http\Controllers\Api\SelesaiDivisiController;
-
+use App\Http\Controllers\Api\PengalihanController;
 
 
 
@@ -100,12 +100,12 @@ Route::get('/produks/utama',        [ProduksController::class, 'utama']);
 Route::get('/produks/tambahan',     [ProduksController::class, 'tambahan']);
 Route::get('/produks/tambahan-max', [ProduksController::class, 'tambahanMax']);
 Route::get('/produks/summary',      [ProduksController::class, 'summary']);
-Route::get('/produksi/load-produks', [ProduksController::class, 'loadProduks']);
-
+Route::get('/produksi/load-produks',[ProduksController::class, 'loadProduks']);
+Route::get('/products',             [ProduksController::class, 'products']);
 Route::get('/selesai-divisi',       [SelesaiDivisiController::class, 'index']); // ?perintah_id=... / ?tanggal=YYYY-MM-DD
 Route::post('/selesai-divisi/row',  [SelesaiDivisiController::class, 'saveRow']);
-Route::post('/selesai-divisi/group', [SelesaiDivisiController::class, 'saveGroup']);
 
+Route::post('/selesai-divisi/group',[SelesaiDivisiController::class, 'saveGroup']);
 Route::post('/auth/login',          [AuthController::class, 'login']);
 
 
@@ -185,3 +185,11 @@ Route::prefix('pengurangan')->group(function () {
     Route::get('/load',            [PenguranganController::class, 'loadPengurangan']);
 });
 Route::middleware(['auth:sanctum'])->post('/rejects/photos', [RejectPhotoController::class, 'store']);
+
+
+Route::get('/pengalihan',           [PengalihanController::class, 'index']);
+Route::get('/pengalihan/summary',   [PengalihanController::class, 'summary']);
+Route::post('/pengalihan',          [PengalihanController::class, 'store']);
+Route::delete('/pengalihan/{id}',   [PengalihanController::class, 'destroy']);
+
+Route::get('/produks/all',          [PengalihanController::class, 'allProducts']);

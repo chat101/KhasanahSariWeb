@@ -314,6 +314,51 @@ public function loadProduks(Request $request)
         ],
     ]);
 }
+public function products(Request $request)
+{
+    // ?keyed=1 untuk output keyed-by-id
+    $keyed = filter_var($request->query('keyed'), FILTER_VALIDATE_BOOL);
+
+    // ambil master produk
+    $rows = MasterProduct::select('id','nama','patokan')
+        ->orderBy('nama')
+        ->get();
+
+    if ($keyed) {
+        // bentuk mirip $produkMap->keyBy('id')
+        $map = $rows->mapWithKeys(function ($p) {
+            return [
+                (int) $p->id => [
+                    'id'            => (int) $p->id,
+                    'nama'          => (string) ($p->nama ?? '-'),
+                    'patokan'       => (float) ($p->patokan ?? 0),
+                    // alias untuk konsumsi frontend (opsional)
+                    'mproducts_id'  => (int) $p->id,
+                    'product_name'  => (string) ($p->nama ?? '-'),
+                ]
+            ];
+        });
+
+        return response()->json([
+            'total' => $rows->count(),
+            'data'  => $map, // keyed-by-id
+        ]);
+    }
+
+    // default: list array untuk dipakai di modal produk tujuan
+    $list = $rows->map(function ($p) {
+        return [
+            'mproducts_id' => (int) $p->id,
+            'product_name' => (string) ($p->nama ?? '-'),
+            'patokan'      => (float) ($p->patokan ?? 0),
+        ];
+    })->values();
+
+    return response()->json([
+        'total' => $list->count(),
+        'data'  => $list, // list array
+    ]);
+}
 
 
 }
