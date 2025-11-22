@@ -51,8 +51,6 @@
         </noscript>
     </div>
 
-
-
     {{-- Bar kontrol --}}
     <div class="px-4 pt-3 flex items-end justify-between gap-3">
         <div class="w-full sm:max-w-xs" x-data x-init="flatpickr($refs.tanggalInput, { defaultDate: '{{ $tanggalProduksi }}', dateFormat: 'Y-m-d' })">
@@ -66,8 +64,8 @@
                 <span class="font-semibold">#{{ $this->perintah_id }}</span>
             </div>
         @endif
-        <button wire:click="submit"
-        wire:loading.attr="disabled" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded shadow">
+        <button wire:click="submit" wire:loading.attr="disabled"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded shadow">
             Simpan
         </button>
         <button type="button" class="hidden"
@@ -89,20 +87,20 @@
                         <col style="width:200px" /><!-- Nama -->
                         <col style="width:80px" /><!-- Target -->
                         <col style="width:110px" /><!-- PO Sistem -->
-                        <col style="width:120px" /><!-- Pengalihan -->
+                        {{-- <col style="width:120px" /><!-- Pengalihan --> --}}
                         <col style="width:120px" /><!-- Penyesuaian -->
                         <col style="width:100px" /><!-- Gojek -->
                         <col style="width:100px" /><!-- Complain -->
                         <col style="width:120px" /><!-- Penj Pabrik -->
-                        <col style="width:110px" /><!-- Retur Produksi -->
-                        <col style="width:130px" /><!-- Retur Jadi -->
-                        <col style="width:100px" /><!-- Total Retur -->
+                        {{-- <col style="width:110px" /><!-- Retur Produksi --> --}}
+                        {{-- <col style="width:130px" /><!-- Retur Jadi --> --}}
+                        {{-- <col style="width:100px" /><!-- Total Retur --> --}}
                         <col style="width:90px" /><!-- SER -->
                         <col style="width:100px" /><!-- Lain-Lain -->
                         <col style="width:90px" /><!-- Sample -->
-                        <col style="width:100px" /><!-- Real -->
-                        <col style="width:120px" /><!-- Dist Sebelum Complain -->
-                        <col style="width:110px" /><!-- Total -->
+                        {{-- <col style="width:100px" /><!-- Real --> --}}
+                        {{-- <col style="width:120px" /><!-- Dist Sebelum Complain --> --}}
+                        {{-- <col style="width:110px" /><!-- Total --> --}}
                     </colgroup>
                     <thead>
                         <tr class="text-gray-900">
@@ -111,20 +109,20 @@
                             <th class="th text-left">Nama Barang</th>
                             <th class="th text-center">Target</th>
                             <th class="th text-center">PO Sistem</th>
-                            <th class="th text-center">Pengalihan Produks</th>
+                            {{-- <th class="th text-center">Pengalihan Produks</th> --}}
                             <th class="th text-center">Penyesuaian PO</th>
                             <th class="th text-center">Gojek</th>
                             <th class="th text-center">Complain</th>
                             <th class="th text-center">Penjualan Pabrik</th>
-                            <th class="th text-center">Retur Produksi</th>
+                            {{-- <th class="th text-center">Retur Produksi</th>
                             <th class="th text-center">Retur Jadi (dekor)</th>
-                            <th class="th text-center">Total Retur</th>
+                            <th class="th text-center">Total Retur</th> --}}
                             <th class="th text-center">SER</th>
                             <th class="th text-center">Lain-Lain</th>
                             <th class="th text-center">Sample</th>
-                            <th class="th text-center">Real</th>
-                            <th class="th text-left">Dist Sebelum Complain</th>
-                            <th class="th text-center">Total</th>
+                            {{-- <th class="th text-center">Real</th> --}}
+                            {{-- <th class="th text-center">Distribusi</th> --}}
+                            {{-- <th class="th text-center">Total</th> --}}
                         </tr>
                     </thead>
                 </table>
@@ -141,20 +139,20 @@
                     <col style="width:200px" />
                     <col style="width:80px" />
                     <col style="width:110px" />
-                    <col style="width:120px" />
+                    {{-- <col style="width:120px" /> --}}
                     <col style="width:120px" />
                     <col style="width:100px" />
                     <col style="width:100px" />
                     <col style="width:120px" />
-                    <col style="width:110px" />
+                    {{-- <col style="width:110px" />
                     <col style="width:130px" />
-                    <col style="width:100px" />
+                    <col style="width:100px" /> --}}
                     <col style="width:90px" />
                     <col style="width:100px" />
                     <col style="width:90px" />
-                    <col style="width:100px" />
-                    <col style="width:120px" />
-                    <col style="width:110px" />
+                    {{-- <col style="width:100px" /> --}}
+                    {{-- <col style="width:120px" /> --}}
+                    {{-- <col style="width:110px" /> --}}
                 </colgroup>
                 <tbody>
                     @forelse($perintahproduksi as $index => $produk)
@@ -172,24 +170,27 @@
 
                             @for ($i = 0; $i <= 7; $i++)
                                 <td class="td">
-                                    <input type="number"
-                                        wire:model.live.debounce.200ms="inputs.{{ $index }}.{{ $i }}"
-                                        class="cell-input ls-sync" />
+                                    <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    wire:model.live.debounce.200ms="inputs.{{ $index }}.{{ $i }}"
+                                    class="cell-input ls-sync format-ribuan"
+                                />
                                 </td>
                             @endfor
 
-                            <td class="td text-center">{{ number_format($retur, 0, ',', '.') }}</td>
-
+                            {{-- <td class="td text-center">{{ number_format($retur, 0, ',', '.') }}</td> --}}
+                            {{--
                             @for ($i = 8; $i <= 11; $i++)
                                 <td class="td">
                                     <input type="number"
                                         wire:model.live.debounce.200ms="inputs.{{ $index }}.{{ $i }}"
                                         class="cell-input ls-sync" />
                                 </td>
-                            @endfor
+                            @endfor --}}
 
-                            <td class="td text-center">{{ number_format($dist, 0, ',', '.') }}</td>
-                            <td class="td text-center">{{ number_format($total, 0, ',', '.') }}</td>
+                            {{-- <td class="td text-center">{{ number_format($dist, 0, ',', '.') }}</td>
+                            <td class="td text-center">{{ number_format($total, 0, ',', '.') }}</td> --}}
                         </tr>
                     @empty
                         <tr>
@@ -531,6 +532,157 @@
     </script>
 
 
+    <script>
+        document.addEventListener('keydown', function(e) {
+            // Hanya tangani input angka di grid
+            if (!e.target.matches('#grid-body input[type="number"], #grid-body input[inputmode="numeric"]')) return;
 
+            const currentRow = e.target.closest('tr');
+            if (!currentRow) return;
+
+            // Ambil semua input angka di baris saat ini
+            const inputsThisRow = Array.from(currentRow.querySelectorAll(
+                'td input[type="number"], td input[inputmode="numeric"]'));
+            const inputIdx = inputsThisRow.indexOf(e.target);
+
+            const prevRow = currentRow.previousElementSibling;
+            const nextRow = currentRow.nextElementSibling;
+
+            // Helper untuk fokus + scroll
+            function focusTo(input) {
+                if (input) {
+                    input.focus();
+                    input.select();
+                    input.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'nearest'
+                    });
+                }
+            }
+
+            // ENTER → ke baris bawah, kolom yang sama
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (nextRow && inputIdx >= 0) {
+                    const nextInputs = nextRow.querySelectorAll(
+                        'td input[type="number"], td input[inputmode="numeric"]');
+                    focusTo(nextInputs[inputIdx]);
+                }
+                return;
+            }
+
+            // SHIFT + ENTER → ke baris atas, kolom yang sama
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                if (prevRow && inputIdx >= 0) {
+                    const prevInputs = prevRow.querySelectorAll(
+                        'td input[type="number"], td input[inputmode="numeric"]');
+                    focusTo(prevInputs[inputIdx]);
+                }
+                return;
+            }
+
+            // PANAH ↓ → baris bawah, kolom yang sama
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (nextRow && inputIdx >= 0) {
+                    const nextInputs = nextRow.querySelectorAll(
+                        'td input[type="number"], td input[inputmode="numeric"]');
+                    focusTo(nextInputs[inputIdx]);
+                }
+                return;
+            }
+
+            // PANAH ↑ → baris atas, kolom yang sama
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (prevRow && inputIdx >= 0) {
+                    const prevInputs = prevRow.querySelectorAll(
+                        'td input[type="number"], td input[inputmode="numeric"]');
+                    focusTo(prevInputs[inputIdx]);
+                }
+                return;
+            }
+
+            // PANAH → → input berikutnya dalam baris yang sama
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                const nextInput = inputsThisRow[inputIdx + 1];
+                focusTo(nextInput);
+                return;
+            }
+
+            // PANAH ← → input sebelumnya dalam baris yang sama
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                const prevInput = inputsThisRow[inputIdx - 1];
+                focusTo(prevInput);
+                return;
+            }
+
+            // OPSIONAL: Home → input pertama baris, End → input terakhir baris
+            if (e.key === 'Home') {
+                e.preventDefault();
+                focusTo(inputsThisRow[0]);
+                return;
+            }
+            if (e.key === 'End') {
+                e.preventDefault();
+                focusTo(inputsThisRow[inputsThisRow.length - 1]);
+                return;
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          // Format angka ke ribuan pakai titik (misal: 1.234.567)
+          function formatRibuan(num) {
+            if (num === '' || num === null || isNaN(num)) return '';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+          }
+
+          // Hapus format titik jadi angka mentah
+          function unformatRibuan(str) {
+            return str.replace(/\./g, '');
+          }
+
+          // Pasang ke semua input dengan class format-ribuan
+          document.querySelectorAll('.format-ribuan').forEach((input) => {
+            // Format awal jika sudah ada nilai
+            if (input.value) input.value = formatRibuan(unformatRibuan(input.value));
+
+            // Saat mengetik → tetap angka saja
+            input.addEventListener('input', (e) => {
+              let raw = unformatRibuan(e.target.value);
+              if (raw === '') {
+                e.target.value = '';
+                e.target.dispatchEvent(new Event('input', { bubbles: true }));
+                return;
+              }
+              const num = parseInt(raw, 10);
+              if (!isNaN(num)) {
+                e.target.value = formatRibuan(num);
+                // kirim nilai mentah ke Livewire
+                e.target.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            });
+
+            // Saat blur → pastikan tampil terformat
+            input.addEventListener('blur', (e) => {
+              const raw = unformatRibuan(e.target.value);
+              if (raw === '') return;
+              e.target.value = formatRibuan(parseInt(raw, 10));
+            });
+
+            // Saat fokus → tampilkan angka mentah (biar gampang edit)
+            input.addEventListener('focus', (e) => {
+              e.target.value = unformatRibuan(e.target.value);
+              // select semua biar bisa langsung ganti
+              setTimeout(() => e.target.select(), 10);
+            });
+          });
+        });
+        </script>
 
 </div>

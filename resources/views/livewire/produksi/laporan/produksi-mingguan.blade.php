@@ -76,15 +76,15 @@
                     class="min-w-full text-left text-gray-200 border border-gray-700 bg-gray-800 rounded-lg text-xs sm:text-sm">
                     <thead class="bg-gray-700 text-white text-center">
                         <tr class="text-center">
-                            <th class="w-10 px-2 py-2">No</th>
-                            <th class="w-10 px-2 py-2">Produk</th>
+                            <th class="w-5 px-2 py-2">No</th>
+                            <th class="w-5 px-2 py-2">Produk</th>
                             <th class="w-10 px-2 py-2">Patokan</th>
                             <th class="w-20">Produksi (Tong)</th>
-                            <th class="w-25 px-2 py-2 ">target Produksi</th>
+                            <th class="w-15 px-2 py-2 ">target Produksi</th>
                             <th class="w-10 px-2 py-2 ">Real</th>
                             <th class="w-20">Pengalihan Produk</th>
                             <th class="w-20">+- Target vs Real</th>
-                            <th class="w-15">%</th>
+                            <th class="w-25">%</th>
                             <th class="w-15">Distrbusi</th>
                             <th class="w-24">Complain</th>
                             <th class="w-20">+- Real vs Distribusi</th>
@@ -112,13 +112,13 @@
                                 <td class="px-2 py-2">
                                     {{ !$isSubtotal && !$isGrandTotal ? $i + 1 : '' }}
                                 </td>
-                                <td class="w-45 text-left">{{ $row['nama'] }}</td>
-                                <td class="w-25 px-2 py-2">{{ $row['patokan'] ?? '-' }}</td>
+                                <td class="w-40 text-left">{{ $row['nama'] }}</td>
+                                <td class="w-15 px-2 py-2">{{ $row['patokan'] ?? '-' }}</td>
                                 <td class="w-20 px-2 py-2">
                                     {{ number_format((float) ($row['total_qty'] ?? 0), 0, ',', '.') }}</td>
                                 <td class="px-2 py-2">
                                     {{ number_format((float) ($row['total_target_produksi'] ?? 0), 0, ',', '.') }}</td>
-                                <td class="w-15 px-2 py-2">
+                                <td class="w-10 px-2 py-2">
                                     {{ number_format((float) ($row['real_total'] ?? 0), 0, ',', '.') }}</td>
                                 <td class="px-2 py-2">
                                     {{ number_format((float) ($row['po_pengalihan'] ?? 0), 0, ',', '.') }}</td>
@@ -142,6 +142,8 @@
                                     {{ number_format((float) ($row['returjadi'] ?? 0), 0, ',', '.') }}</td>
                                 <td class="px-2 py-2">
                                     {{ number_format((float) ($row['totalretur'] ?? 0), 0, ',', '.') }}</td>
+                                        {{-- <td class="px-2 py-2">
+                                            totalretur</td> --}}
                                 <td class="px-2 py-2">Rp {{ number_format((float) ($row['hpp'] ?? 0), 2, ',', '.') }}
                                 </td>
                                 <td class="px-2 py-2">
@@ -207,18 +209,31 @@
                                 </td>
                                 <td class="px-2 py-2 text-left">{{ $row['nama'] }}</td>
                                 <td class="px-2 py-2">{{ $row['patokan'] }}</td>
+                                {{-- <td class="px-2 py-2">patokan</td> --}}
+
                                 <td class="px-2 py-2">{{ number_format($row['total_qty']) }}</td>
                                 <td class="px-2 py-2">{{ number_format($row['total_target_produksi'] ?? 0) }}</td>
                                 <td class="px-2 py-2">{{ number_format($row['real_total'] ?? 0) }}</td>
                                 <td class="px-2 py-2">{{ number_format($row['totalretur']) }}</td>
+
                                 <td class="px-2 py-2">{{ number_format($row['sample']) }}</td>
+                                {{-- <td class="px-2 py-2">sample</td> --}}
+
                                 <td class="px-2 py-2">{{ number_format($row['targetvsrealroker']) }}</td>
+                                {{-- <td class="px-2 py-2">targetvsrealroker</td> --}}
+
                                 <td class="px-2 py-2">{{ number_format($row['stok_awal_periode']) }}</td>
                                 <td class="px-2 py-2">{{ number_format($row['complain']) }}</td>
+                                {{-- <td class="px-2 py-2">complain</td> --}}
+
                                 <td class="px-2 py-2">{{ number_format($row['dist']) }}</td>
+                                {{-- <td class="px-2 py-2">dist</td> --}}
+
                                 <td class="px-2 py-2">{{ number_format($row['stok_akhir_periode']) }}</td>
                                 <td class="px-2 py-2 hidden">aktual</td>
-                                <td class="px-2 py-2 hidden">{{ number_format($row['realvssistemroker']) }}</td>
+                                {{-- <td class="px-2 py-2 hidden">{{ number_format($row['realvssistemroker']) }}</td> --}}
+                                <td class="px-2 py-2 hidden">realvssistemroker</td>
+
                             </tr>
                         @empty
                             <tr>

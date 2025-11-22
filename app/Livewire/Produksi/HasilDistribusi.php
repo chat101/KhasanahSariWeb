@@ -117,37 +117,29 @@ class HasilDistribusi extends Component
                     $inp = $this->inputs[$i] ?? [];
 
                     $po        = (int) ($inp[0]  ?? 0);
-                    $pengalihan= (int) ($inp[1]  ?? 0);
-                    $penyes    = (int) ($inp[2]  ?? 0);
-                    $gojek     = (int) ($inp[3]  ?? 0);
-                    $complain  = (int) ($inp[4]  ?? 0);
-                    $pabrik    = (int) ($inp[5]  ?? 0);
-                    $retProd   = (int) ($inp[6]  ?? 0);
-                    $retJadi   = (int) ($inp[7]  ?? 0);
-                    $ser       = (int) ($inp[8]  ?? 0);
-                    $lain      = (int) ($inp[9]  ?? 0);
-                    $sample    = (int) ($inp[10] ?? 0);
-                    $real      = (int) ($inp[11] ?? 0);
-
-                    $totalRetur = $retProd + $retJadi;
-                    $sblm       = $po + $pengalihan + $penyes + $gojek + $pabrik + $ser + $lain + $sample;
-                    $total      = $po + $pengalihan + $penyes + $gojek + $complain + $pabrik + $ser + $lain + $sample - $totalRetur;
-
+                    // $pengalihan= (int) ($inp[1]  ?? 0);
+                    $penyes    = (int) ($inp[1]  ?? 0);
+                    $gojek     = (int) ($inp[2]  ?? 0);
+                    $complain  = (int) ($inp[3]  ?? 0);
+                    $pabrik    = (int) ($inp[4]  ?? 0);
+                    // $retProd   = (int) ($inp[6]  ?? 0);
+                    // $retJadi   = (int) ($inp[7]  ?? 0);
+                    $ser       = (int) ($inp[5]  ?? 0);
+                    $lain      = (int) ($inp[6]  ?? 0);
+                    $sample    = (int) ($inp[7] ?? 0);
+                    // $real      = (int) ($inp[8] ?? 0);
+                    $sblm       = $po + $penyes + $gojek + $pabrik + $ser + $lain + $sample;
+                    $total      = $po + $penyes + $gojek + $complain + $pabrik + $ser + $lain + $sample ;
                     $mproductId = (int) data_get($row, 'mproducts_id', 0);
 
                     Hasil_Produksi::updateOrCreate(
                         ['perintah_produksi_id' => $perintahId, 'mproducts_id' => $mproductId],
                         [
-                            'real'             => $real,
                             'po_sistem'        => $po,
-                            'po_pengalihan'    => $pengalihan,
                             'po_penyesuaian'   => $penyes,
                             'gojek'            => $gojek,
                             'complain'         => $complain,
                             'penjualan_pabrik' => $pabrik,
-                            'retur_produksi'   => $retProd,
-                            'retur_jadi'       => $retJadi,
-                            'total_retur'      => $totalRetur,
                             'ser'              => $ser,
                             'lain_lain'        => $lain,
                             'sblm_complain'    => $sblm,
