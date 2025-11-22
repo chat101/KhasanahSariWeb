@@ -146,7 +146,7 @@ class AuthController extends Controller
                     'username' => $user->username ?? null,
                     'email'    => $user->email,
                     'role'     => $user->role ?? null,
-                    'divisi_id'  => $user->divisi_id,                               // ⬅️ penting
+                    'divisi_id'  => (int) $user->divisi_id,  // ✅ pastikan integer                    // ⬅️ penting
                     'divisi_nama'=> optional($user->divisi)->nama_divisi,
                 ],
             ]);
@@ -172,7 +172,7 @@ class AuthController extends Controller
                 'username' => $u->username ?? null,
                 'email'    => $u->email,
                 'role'     => $u->role ?? null,
-                'divisi_id'  => $u->divisi_id,                                   // ⬅️ penting
+                'divisi_id'  => (int) $u->divisi_id,  // ✅ biar aman di perbandingan strict                           // ⬅️ penting
                 'divisi_nama' => optional($u->divisi)->nama_divisi
                 ?? optional($u->divisi)->nama, // ⬅️
             ],

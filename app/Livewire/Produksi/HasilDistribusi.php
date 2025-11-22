@@ -95,6 +95,12 @@ class HasilDistribusi extends Component
         $rows = count($this->perintahproduksi);
         $this->inputs = array_fill(0, $rows, array_fill(0, 12, 0));
     }
+
+    private function unformat($v): int {
+        if (!$v) return 0;
+        return (int) str_replace('.', '', $v);
+    }
+
     public function submit(): void
     {
         $perintahId = (int) $this->perintah_id;
@@ -116,18 +122,22 @@ class HasilDistribusi extends Component
                 foreach ($this->perintahproduksi as $i => $row) {
                     $inp = $this->inputs[$i] ?? [];
 
-                    $po        = (int) ($inp[0]  ?? 0);
-                    // $pengalihan= (int) ($inp[1]  ?? 0);
-                    $penyes    = (int) ($inp[1]  ?? 0);
-                    $gojek     = (int) ($inp[2]  ?? 0);
-                    $complain  = (int) ($inp[3]  ?? 0);
-                    $pabrik    = (int) ($inp[4]  ?? 0);
-                    // $retProd   = (int) ($inp[6]  ?? 0);
-                    // $retJadi   = (int) ($inp[7]  ?? 0);
-                    $ser       = (int) ($inp[5]  ?? 0);
-                    $lain      = (int) ($inp[6]  ?? 0);
-                    $sample    = (int) ($inp[7] ?? 0);
-                    // $real      = (int) ($inp[8] ?? 0);
+                    // $po        = (int) ($inp[0]  ?? 0);
+                    // $penyes    = (int) ($inp[1]  ?? 0);
+                    // $gojek     = (int) ($inp[2]  ?? 0);
+                    // $complain  = (int) ($inp[3]  ?? 0);
+                    // $pabrik    = (int) ($inp[4]  ?? 0);
+                    // $ser       = (int) ($inp[5]  ?? 0);
+                    // $lain      = (int) ($inp[6]  ?? 0);
+                    // $sample    = (int) ($inp[7] ?? 0);
+                    $po       = $this->unformat($inp[0] ?? 0);
+                    $penyes   = $this->unformat($inp[1] ?? 0);
+                    $gojek    = $this->unformat($inp[2] ?? 0);
+                    $complain = $this->unformat($inp[3] ?? 0);
+                    $pabrik   = $this->unformat($inp[4] ?? 0);
+                    $ser      = $this->unformat($inp[5] ?? 0);
+                    $lain     = $this->unformat($inp[6] ?? 0);
+                    $sample   = $this->unformat($inp[7] ?? 0);
                     $sblm       = $po + $penyes + $gojek + $pabrik + $ser + $lain + $sample;
                     $total      = $po + $penyes + $gojek + $complain + $pabrik + $ser + $lain + $sample ;
                     $mproductId = (int) data_get($row, 'mproducts_id', 0);

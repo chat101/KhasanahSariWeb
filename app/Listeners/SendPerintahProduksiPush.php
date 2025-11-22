@@ -3,32 +3,65 @@
 namespace App\Listeners;
 
 use App\Events\PerintahProduksiCreated;
-use App\Services\ExpoPushService;
+use App\Jobs\SendExpoPush;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class SendPerintahProduksiPush
 {
-    public function __construct(private ExpoPushService $expo) {}
-
     public function handle(PerintahProduksiCreated $event): void
     {
-        // Ambil model dari event, bukan variabel terpisah
         $pp = $event->pp;
 
-        // Ambil target user (contoh: semua baker / atau user_id dari pp)
-        $targetUsers = collect([$pp->user])->filter();
+        // Grup role yang menerima notifikasi PP
+        $roles = [
+            'admin',
+            'adminproduksi',
+            'leaderproduksi',
+            'gudang'
+        ];
 
-        $tokens = $targetUsers
-            ->flatMap(fn($u) => $u->pushTokens()->pluck('expo_token'))
-            ->unique()
-            ->values();
+   // Jangan pernah kirim notif PP ke teknisi
+        $userIds = User::whereIn('role', $roles)
+        ->where('divisi_id', '!=', 12)   // ⬅ tekankan di sini
+        ->whereHas('pushTokens')
+        ->pluck('id');
 
-        if ($tokens->isNotEmpty()) {
-            $this->expo->send(
-                $tokens,
-                'Perintah Produksi Baru',
-                "PP #{$pp->id} telah dibuat.",
-                ['type' => 'pp_created', 'pp_id' => $pp->id]
-            );
+        if ($userIds->isEmpty()) {
+            Log::info('push: no users for pp_created', ['pp_id' => $pp->id]);
+            return;
         }
+
+        $tokens = \App\Models\UserPushToken::whereIn('user_id', $userIds)
+            ->pluck('expo_token')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (empty($tokens)) {
+            Log::info('push: no tokens for pp_created', ['pp_id' => $pp->id]);
+            return;
+        }
+
+        // Dispatch JOB
+        SendExpoPush::dispatch(
+            tokens:   $tokens,
+            title:    'Perintah Produksi Baru',
+            body:     "PP #{$pp->id} telah dibuat.",
+            data:     [
+                'type'   => 'pp_created',
+                'pp_id'  => $pp->id,
+                'tanggal'=> $pp->tanggal_perintah
+            ],
+            sound:    null,             // bisa diganti "alarm.wav"
+            channelId:'alerts',
+            priority: 'high',
+            ttl:      1800
+        );
+
+        Log::info('pp_created: push job dispatched', [
+            'pp_id' => $pp->id,
+            'tokens' => count($tokens)
+        ]);
     }
 }

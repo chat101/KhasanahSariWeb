@@ -1,78 +1,5 @@
 <?php
 
-// use Illuminate\Support\Facades\Route;
-// use App\Http\Controllers\Api\ProduksController;
-// use App\Http\Controllers\Api\SelesaiDivisiController;
-// use App\Http\Controllers\Api\AuthController;
-// use App\Http\Controllers\Api\NotifyController;
-// use App\Models\User;
-// use Illuminate\Http\Request;
-// Route::get('/produks/utama',        [ProduksController::class, 'utama']);
-// Route::get('/produks/tambahan',     [ProduksController::class, 'tambahan']);
-// Route::get('/produks/tambahan-max', [ProduksController::class, 'tambahanMax']);
-// Route::get('/produks/summary',      [ProduksController::class, 'summary']); // opsional
-
-
-
-// Route::get('/selesai-divisi',          [SelesaiDivisiController::class, 'index']);   // ?perintah_id=... atau ?tanggal=YYYY-MM-DD
-// Route::post('/selesai-divisi/row',     [SelesaiDivisiController::class, 'saveRow']);
-// Route::post('/selesai-divisi/group',   [SelesaiDivisiController::class, 'saveGroup']);
-
-
-// Route::post('/auth/login', [AuthController::class, 'login']);
-
-// Route::middleware('auth:sanctum')->group(function () {
-//     Route::get('/auth/me',          [AuthController::class, 'me']);
-//     Route::post('/auth/logout',     [AuthController::class, 'logout']);
-//     Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
-// });
-// Route::middleware('auth:sanctum')->group(function () {
-//     Route::get('/notify/overview', [NotifyController::class, 'overview']);
-// });
-// Route::middleware('auth:sanctum')->group(function () {
-//     Route::get('/notify/overview', [ProduksController::class, 'notifyOverview']);
-
-//     // ...rute lain...
-// });
-// Route::get('/ping', fn() => ['ok' => true]);
-// Route::get('/produksi/load-produks', [ProduksController::class, 'loadProduks']);
-// Route::post('/save-token', [User::class, 'saveToken']);
-// Route::middleware('auth:sanctum')->post('/save-token', [\App\Http\Controllers\Api\PushTokenController::class, 'store']);
-
-
-
-// Route::post('/debug/echo', function (Request $r) {
-//     return response()->json(['ok' => true, 'body' => $r->all()]);
-// });
-// Route::middleware('auth:sanctum')->post('/push/register', function (Request $r) {
-//     $user = $r->user();
-
-//     $data = $r->validate([
-//         'expo_token'  => 'required|string',
-//         'native_token'=> 'nullable|string',
-//         'device.brand'=> 'nullable|string',
-//         'device.model'=> 'nullable|string',
-//         'device.os_name'=> 'nullable|string',
-//         'device.os_version'=> 'nullable|string',
-//         'device.is_emulator'=> 'nullable|boolean',
-//     ]);
-
-//     // upsert per-user per-expo_token
-//     $row = \App\Models\UserPushToken::updateOrCreate(
-//         ['user_id' => $user->id, 'expo_token' => $data['expo_token']],
-//         [
-//             'native_token'   => $data['native_token'] ?? null,
-//             'device_brand'   => data_get($data, 'device.brand'),
-//             'device_model'   => data_get($data, 'device.model'),
-//             'device_os'      => data_get($data, 'device.os_name'),
-//             'device_os_ver'  => data_get($data, 'device.os_version'),
-//             'is_emulator'    => data_get($data, 'device.is_emulator', false),
-//             'last_seen_at'   => now(),
-//         ]
-//     );
-
-//     return response()->json(['ok' => true, 'id' => $row->id]);
-// });
 
 
 use App\Models\Slide;
@@ -82,16 +9,16 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SlideController;
 use App\Http\Controllers\Api\NotifyController;
+use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\ProduksController;
 use App\Http\Controllers\Api\PushTokenController;
+use App\Http\Controllers\Api\PengalihanController;
 use App\Http\Controllers\Api\HasilGilingController;
 use App\Http\Controllers\Api\HasilRejectController;
 use App\Http\Controllers\Api\PenguranganController;
 use App\Http\Controllers\Api\RejectPhotoController;
 use App\Http\Controllers\Api\SelesaiDivisiController;
-use App\Http\Controllers\Api\PengalihanController;
-
-
+use App\Http\Controllers\Api\TicketTeknisiController;
 
 // --- Public endpoints (no auth) ---
 Route::get('/ping', fn() => ['ok' => true]);
@@ -193,3 +120,16 @@ Route::post('/pengalihan',          [PengalihanController::class, 'store']);
 Route::delete('/pengalihan/{id}',   [PengalihanController::class, 'destroy']);
 
 Route::get('/produks/all',          [PengalihanController::class, 'allProducts']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/tickets', [TicketTeknisiController::class, 'store']);
+    Route::post('/upload', [UploadController::class, 'store']);
+});
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/tickets', [TicketTeknisiController::class, 'index']);
+    Route::post('/tickets', [TicketTeknisiController::class, 'store']);
+    Route::put('/tickets/{ticket}/start', [TicketTeknisiController::class, 'start']);
+    Route::put('/tickets/{ticket}/finish', [TicketTeknisiController::class, 'finish']);
+    Route::get('/ticket-teknisi/pending-count', [TicketTeknisiController::class, 'pendingCount']);
+    Route::get('/ticket-teknisi', [TicketTeknisiController::class, 'listByUser']);
+});

@@ -70,7 +70,11 @@
     {{-- Tab Content --}}
     <div class="mt-4 p-4 bg-black rounded-lg shadow border border-gray-700">
         {{-- Brownis & Cake --}}
-        <div x-show="activeTab === 'browniscake'" x-cloak>
+        <div
+        x-show="activeTab === 'browniscake'"
+        x-cloak
+        wire:key="browniscake-{{ $tanggalAwal }}-{{ $tanggalAkhir }}"
+      >
             <div class="overflow-auto">
                 <table
                     class="min-w-full text-left text-gray-200 border border-gray-700 bg-gray-800 rounded-lg text-xs sm:text-sm">

@@ -155,9 +155,9 @@
                   <th class="p-2 text-right">Total</th>
                 </tr>
               </thead>
-              <tbody wire:key="table-barang-masuk" class="divide-y divide-gray-100 dark:divide-zinc-700">
+              <tbody wire:key="table-barang-masuk" class="divide-y divide-gray-100 dark:divide-zinc-700 ">
                 @foreach($data as $index => $item)
-                  <tr wire:key="baris-{{ $index }}" class="odd:bg-white even:bg-gray-50 dark:odd:bg-zinc-800 dark:even:bg-zinc-900">
+                  <tr wire:key="baris-{{ $index }}" class="odd:bg-white even:bg-gray-50 dark:odd:bg-zinc-800 dark:even:bg-zinc-900 ">
                     <td class="p-2">{{ $loop->iteration }}</td>
                     <td class="p-2">{{ $item['barang']['id'] }}</td>
                     <td class="p-2">{{ $item['barang']['nmbarang'] }}</td>
@@ -202,18 +202,18 @@
                           x-on:blur="displayValue = formatInput(displayValue)"
                           placeholder="Harga" type="text"
                           wire:model.live="harga.{{ $index }}"
-                          class="px-2 py-1.5 rounded border border-gray-300 dark:border-zinc-600 focus:ring focus:ring-blue-300 text-black sm:w-24 md:w-32 bg-blue-50 dark:bg-zinc-800"
+                          class="px-2 py-1.5 rounded border  border-gray-300 dark:border-zinc-600 focus:ring focus:ring-blue-300 text-white sm:w-24 md:w-32 bg-blue-50 dark:bg-zinc-800"
                         />
                       </div>
                     </td>
 
                     <td class="p-2">
                       <input type="number" wire:model.live="diskon.{{ $index }}"
-                             class="px-2 py-1.5 rounded border border-gray-300 dark:border-zinc-600 focus:ring focus:ring-blue-300 text-black sm:w-24 md:w-32 bg-blue-50 dark:bg-zinc-800" />
+                             class="px-2 py-1.5 rounded border border-gray-300 dark:border-zinc-600 focus:ring focus:ring-blue-300 text-white sm:w-24 md:w-32 bg-blue-50 dark:bg-zinc-800" />
                     </td>
                     <td class="p-2">
                       <input type="number" wire:model.live="ppn.{{ $index }}"
-                             class="px-2 py-1.5 rounded border border-gray-300 dark:border-zinc-600 focus:ring focus:ring-blue-300 text-black sm:w-24 md:w-32 bg-blue-50 dark:bg-zinc-800" />
+                             class="px-2 py-1.5 rounded border border-gray-300 dark:border-zinc-600 focus:ring focus:ring-blue-300 text-white sm:w-24 md:w-32 bg-blue-50 dark:bg-zinc-800" />
                     </td>
 
                     <td class="p-2 text-right tabular-nums">

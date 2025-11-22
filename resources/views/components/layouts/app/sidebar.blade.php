@@ -208,6 +208,21 @@
                     @endmenuitem
                 </flux:navlist.group>
             @endmenugroup
+
+            @menugroup('TEKNISI')
+            <flux:navlist.group expandable
+                :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="TEKNISI"
+                class="grid">
+                @menuitem('TEKNISI', 'ticket.web.create')
+                    <flux:navlist.item icon="home" :href="route('ticket.web.create')"
+                        :current="request()->routeIs('ticket.web.create')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Tiket Teknisi') }}
+                    </flux:navlist.item>
+                @endmenuitem
+
+            </flux:navlist.group>
+        @endmenugroup
             {{-- Grup Laporan --}}
             @menugroup('LAPORAN')
                 <flux:navlist.group expandable

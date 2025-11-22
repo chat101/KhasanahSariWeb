@@ -166,6 +166,7 @@ class PerintahProduksi extends Component
         // Ambil user target (kalau mau batasi role, aktifkan whereIn di bawah)
         $targetUserIds = \App\Models\User::query()
             ->whereIn('role', ['admin','adminproduksi', 'leaderproduksi'])
+            ->where('divisi_id', '!=', 12)   // ← blokir teknisi
             ->whereHas('pushTokens')
             // ->whereKeyNot(Auth::id())           // HAPUS saat test sendiri
             ->pluck('id');
@@ -389,8 +390,12 @@ class PerintahProduksi extends Component
         // Kirim Expo push (dengan channelId + TTL) — di luar transaksi
         $tokenList = UserPushToken::whereIn(
             'user_id',
-            User::whereHas('pushTokens')->pluck('id')
-        )->pluck('expo_token')->unique()->values();
+            User::whereHas('pushTokens')
+                ->where('divisi_id', '!=', 12)   // ← teknisi tidak boleh terima
+                ->pluck('id')
+        )->pluck('expo_token')
+        ->unique()
+        ->values();
 
            if ($tokenList->isNotEmpty()) {
             try {

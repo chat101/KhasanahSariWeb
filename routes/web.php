@@ -2,12 +2,7 @@
 
 
 use App\Livewire\Dashboard;
-use App\Livewire\Finance\BayarPiutang;
-use App\Livewire\Finance\BiayaInputPusat;
-use App\Livewire\Finance\MasterKontrakan;
-use App\Livewire\Finance\MasterRekening;
 use Illuminate\Support\Str;
-
 use Illuminate\Http\Request;
 use App\Livewire\Master\Toko;
 use App\Livewire\Master\Users;
@@ -15,49 +10,56 @@ use App\Livewire\Master\Barang;
 
 use App\Livewire\Master\Supplier;
 use App\Livewire\Produksi\Produk;
-
-
-
 use App\Livewire\Settings\Profile;
 use App\Livewire\Produksi\Complain;
+
 use App\Livewire\Settings\Password;
 use App\Livewire\Gudang\InputBrgMsk;
 
+
+
 use App\Livewire\Produksi\WorkOrder;
 use Illuminate\Support\Facades\View;
+use App\Livewire\Produksi\HasilDekor;
 use App\Livewire\Settings\Appearance;
+
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Finance\BayarPiutang;
 use App\Livewire\Finance\SetoranMasuk;
+use App\Livewire\Produksi\HasilDivisi;
+use App\Livewire\Produksi\HasilGiling;
+use App\Livewire\Produksi\HasilPoprok;
+
+use App\Livewire\Produksi\HasilCounter;
+
+use App\Livewire\Finance\MasterRekening;
 use App\Livewire\Laporan\LapBarangMasuk;
 
 use App\Livewire\Produksi\Produktivitas;
-
 use App\Livewire\Produksi\SettingBagian;
+use App\Livewire\Finance\BiayaInputPusat;
+use App\Livewire\Finance\MasterKontrakan;
 use App\Livewire\Gudang\RekapInputGudang;
-
+use App\Livewire\Produksi\MachineProduct;
 use App\Livewire\Produksi\RekapWorkorder;
 use App\Livewire\Produksi\StokAwalOpname;
 use App\Livewire\Finance\UangMasukPeriode;
 use App\Livewire\Produksi\HasilDistribusi;
+
 use App\Livewire\Produksi\PenyesuaianStok;
 use App\Livewire\Purchasing\SupplierMasuk;
 use App\Livewire\Produksi\PerintahProduksi;
 use App\Livewire\Produksi\SelesaikanDivisi;
+use App\Livewire\Produksi\Laporan\LapHarian;
 use App\Livewire\Produksi\OpnamePenyesuaian;
 use App\Livewire\Produksi\InputSelesaiDivisi;
-
 use App\Livewire\Produksi\DaftarPerintahProduksi;
-use App\Livewire\Produksi\HasilCounter;
-use App\Livewire\Produksi\HasilDekor;
 use App\Livewire\Produksi\Laporan\ProduksiMingguan;
 use App\Livewire\Produksi\Laporan\JamSelesaiBulanan;
 use App\Livewire\Produksi\Laporan\LaporanJamSelesai;
 use App\Livewire\Produksi\Laporan\LaporanHasilProduksi;
-use App\Livewire\Produksi\HasilDivisi;
-use App\Livewire\Produksi\HasilGiling;
-use App\Livewire\Produksi\HasilPoprok;
-use App\Livewire\Produksi\Laporan\LapHarian;
-use App\Livewire\Produksi\MachineProduct;
+
+use App\Livewire\Teknisi\TicketTeknisiWebController;
 
 Route::middleware(['auth']) // jika perlu
     ->get('/admin/slides', \App\Livewire\Slides\Manage::class)
@@ -138,6 +140,12 @@ Route::middleware(['auth']) // jika perlu
 
 
 
+});
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/ticket/web/create', TicketTeknisiWebController::class)
+        ->name('ticket.web.create');
 });
 Route::middleware('auth')->group(function () {
     Route::post('/webpush/subscribe', function (Request $r) {
