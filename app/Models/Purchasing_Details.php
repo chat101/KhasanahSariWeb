@@ -28,4 +28,8 @@ class Purchasing_Details extends Model
     {
         return $this->belongsTo(Purchasing::class, 'purchasing_id');  // Pastikan nama kolomnya benar
     }
+    public function barang()
+    {
+        return $this->belongsTo(MasterBarang::class, 'barang_id', 'id');
+    }
 }

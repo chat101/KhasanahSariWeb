@@ -70,7 +70,6 @@ class SupplierMasuk extends Component
     // }
     public function hitungTotal($index)
     {
-        // Ambil dan pastikan semua nilai berupa string numerik
         $qty = $this->sanitizeNumber($this->data[$index]['qty'] ?? 0);
         $harga = $this->sanitizeNumber($this->harga[$index] ?? 0);
         $diskon = $this->sanitizeNumber($this->diskon[$index] ?? 0);
@@ -83,40 +82,24 @@ class SupplierMasuk extends Component
         $total = bcadd($subtotal, $ppnValue, 2);
 
         $this->total[$index] = $total;
-
         $this->grandTotal = array_reduce(
             $this->total,
-            function ($carry, $item) {
-                return bcadd($carry, $this->sanitizeNumber($item), 2);
-            },
-            '0.00',
+            fn($carry, $item) => bcadd($carry, $this->sanitizeNumber($item), 2),
+            '0.00'
         );
     }
 
     private function sanitizeNumber($value): string
     {
-        if (is_null($value) || $value === '') {
-            return '0.00';
-        }
-
-        $value = (string) $value;
-
-        // Format Indonesia → hapus titik ribuan dan ubah koma jadi titik
-        if (strpos($value, ',') !== false) {
-            $value = str_replace('.', '', $value); // hapus titik ribuan
-            $value = str_replace(',', '.', $value); // ubah koma jadi titik
-        }
-
-        // Hapus karakter tak valid
+        if (empty($value)) return '0.00';
+        $value = str_replace(['.', ','], ['', '.'], (string)$value);
         $value = preg_replace('/[^0-9.]/', '', $value);
-
-        // Paksa format desimal 2 digit
-        return number_format((float) $value, 2, '.', '');
+        return number_format((float)$value, 2, '.', '');
     }
 
     public function getGrandTotalProperty()
     {
-        return collect($this->data)->keys()->sum(fn($index) => $this->hitungTotal($index));
+        return array_reduce($this->total, fn($carry, $item) => $carry + (float)$item, 0);
     }
 
     public function loadDraftFromLocalStorage()
@@ -148,16 +131,17 @@ class SupplierMasuk extends Component
     public function render()
     {
         $suppliers = Gudang_Masuk::with('supplier')
-            ->where('status', 0) // Eager load relasi 'supplier'
-            ->when($this->search, function ($query) {
-                $query
-                    ->where('no_po', 'like', '%' . $this->search . '%')
-                    ->orWhere('no_faktur', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('supplier', function ($query) {
-                        $query->where('nmsupp', 'like', '%' . $this->search . '%'); // Kondisi untuk nama_supplier
-                    });
-            })
-            ->paginate(25);
+        ->where('status', 0)
+        ->when($this->search, function ($query) {
+            $query->where(function ($q) {
+                $q->where('no_po', 'like', "%{$this->search}%")
+                  ->orWhere('no_faktur', 'like', "%{$this->search}%")
+                  ->orWhereHas('supplier', fn($q) =>
+                      $q->where('nmsupp', 'like', "%{$this->search}%")
+                  );
+            });
+        })
+        ->paginate(25);
         return view('livewire.purchasing.supplier-masuk', [
             'suppliers' => $suppliers,
         ]);
@@ -194,13 +178,7 @@ class SupplierMasuk extends Component
                 ];
             })
             ->toArray();
-        // ✅ Mapping ke property individual
-        // foreach ($this->data as $index => $item) {
-        //     $this->qty[$index] = $item['qty'];
-        //     $this->harga[$index] = $item['harga'];
-        //     $this->diskon[$index] = $item['diskon'];
-        //     $this->ppn[$index] = $item['ppn'];
-        // }
+
         // PANGGIL DISPATCH DI AKHIR
         $this->dispatch('transaksi-loaded', [
             'notrans' => $this->notrans,
@@ -219,7 +197,8 @@ class SupplierMasuk extends Component
             'tanggal' => 'required|date',
             'no_po' => 'required|string',
             'no_faktur' => 'required|string',
-            'supplier_id' => 'required|integer',
+         'supplier_id' => 'required|exists:suppliers,id',
+
         ]);
         $data = Gudang_Masuk::findOrFail($this->selectedId);
         $data->update([
@@ -290,47 +269,16 @@ class SupplierMasuk extends Component
                 }
                 Log::info('Semua detail berhasil disimpan');
             }
-            // versi refactoring
-            // if ($purchasing->wasRecentlyCreated) {
-            //     foreach ($this->data as $index => $item) {
-            //         // Ambil dan sanitasi nilai-nilai numerik
-            //         $harga  = $this->sanitizeNumber($this->harga[$index] ?? 0);
-            //         $diskon = $this->sanitizeNumber($this->diskon[$index] ?? 0);
-            //         $ppn    = $this->sanitizeNumber($this->ppn[$index] ?? 0);
-            //         $total  = $this->sanitizeNumber($this->total[$index] ?? 0);
-            //         $qty    = $this->sanitizeNumber($item['qty'] ?? 0);
 
-            //         // Validasi minimal agar tidak simpan data kosong
-            //         if (empty($item['barang']['id']) || $qty <= 0) {
-            //             Log::warning("Baris ke-{$index} dilewati karena data tidak lengkap", ['data' => $item]);
-            //             continue;
-            //         }
-
-            //         $purchasing->details()->create([
-            //             'purchasing_id' => $purchasing->id,
-            //             'no_urut'       => $index + 1,
-            //             'barang_id'     => $item['barang']['id'],
-            //             'qty'           => $qty,
-            //             'satuan'        => $item['satuan'],
-            //             'harga'         => $harga,
-            //             'diskon'        => $diskon,
-            //             'ppn'           => $ppn,
-            //             'total'         => $total,
-            //         ]);
-
-            //         Log::info("Detail baris ke-{$index} berhasil disimpan", [
-            //             'barang_id' => $item['barang']['id'],
-            //             'qty'       => $qty,
-            //             'harga'     => $harga,
-            //             'total'     => $total,
-            //         ]);
-            //     }
-            // }
             DB::commit();
             Log::info('Transaksi berhasil disimpan');
 
             $this->dispatch('swal:success', 'Berhasil menyimpan');
-            $this->reset();
+            $this->reset([
+                'tanggal', 'notrans', 'qty', 'supplier', 'data',
+                'no_faktur', 'no_po', 'supplier_id', 'harga',
+                'diskon', 'ppn', 'total', 'grandTotal'
+            ]);
             $this->dispatch('closeModal');
         } catch (\Exception $e) {
             DB::rollBack();

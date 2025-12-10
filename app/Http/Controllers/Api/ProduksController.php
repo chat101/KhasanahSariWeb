@@ -32,12 +32,18 @@ class ProduksController extends Controller
             ->pluck('total_utama','mproducts_id');
 
         // Map tambahan (sum qty_tambahan)
-        $tambahanMap = Produksi_Tambahan::whereHas('perintahProduksi', function ($q) use ($tanggal) {
-                $q->whereDate('tanggal_perintah', $tanggal);
-            })
-            ->selectRaw('mproducts_id, SUM(qty_tambahan) as total_tambahan')
-            ->groupBy('mproducts_id')
-            ->pluck('total_tambahan','mproducts_id');
+     // Map tambahan (sum qty_tambahan + kumpulkan keterangan)
+$tambahanRows = Produksi_Tambahan::whereHas('perintahProduksi', function ($q) use ($tanggal) {
+    $q->whereDate('tanggal_perintah', $tanggal);
+})
+->selectRaw('
+    mproducts_id,
+    SUM(qty_tambahan) as total_tambahan,
+    GROUP_CONCAT(DISTINCT keterangan ORDER BY id SEPARATOR " • ") as ket
+')
+->groupBy('mproducts_id')
+->get()
+->keyBy('mproducts_id');   // ->get(id) nanti
 
         // Data produksi & target
         $produksiData = Detail_Perintah_Produksi::whereHas('perintahProduksi', function ($q) use ($tanggal) {
@@ -49,11 +55,14 @@ class ProduksController extends Controller
             ->keyBy('mproducts_id');
 
         // Satukan
-        $finalData = $produks->map(function ($produk) use ($utamaMap, $tambahanMap, $produksiData) {
+        $finalData = $produks->map(function ($produk) use ($utamaMap, $tambahanRows, $produksiData) {
             $id = $produk->id;
             $patokan = (float) ($produk->patokan ?? 0);
             $totalUtama = (float) ($utamaMap[$id] ?? 0);
-            $totalTambahan = (float) ($tambahanMap[$id] ?? 0);
+
+            $tRow = $tambahanRows->get($id);
+            $totalTambahan   = (float) ($tRow->total_tambahan ?? 0);
+            $keteranganExtra = $tRow->ket ?? null;   // hasil GROUP_CONCAT
 
             return [
                 'mproducts_id'       => $id,
@@ -65,6 +74,7 @@ class ProduksController extends Controller
                 'konversi_tambahan'  => (int) round($patokan * $totalTambahan),
                 'produksi_qty'       => (float) ($produksiData[$id]->total_produksi ?? 0),
                 'target_produksi'    => (float) ($produksiData[$id]->total_target ?? 0),
+                'keterangan'         => $keteranganExtra,   // <--- field baru
             ];
         });
 
@@ -277,11 +287,16 @@ public function loadProduks(Request $request)
     if ($perintah) {
         // group per tambahan_ke lalu susun tabelnya (ASC: 1,2,3,...)
         $grouped = \App\Models\Produksi\Produksi_Tambahan::where('perintah_produksi_id', $perintah->id)
-            ->selectRaw('tambahan_ke, mproducts_id, SUM(qty_tambahan) as qty')
-            ->groupBy('tambahan_ke', 'mproducts_id')
-            ->orderBy('tambahan_ke', 'asc')
-            ->get()
-            ->groupBy('tambahan_ke');
+        ->selectRaw('
+            tambahan_ke,
+            mproducts_id,
+            SUM(qty_tambahan) as qty,
+            GROUP_CONCAT(DISTINCT keterangan ORDER BY id SEPARATOR " • ") as ket
+        ')
+        ->groupBy('tambahan_ke', 'mproducts_id')
+        ->orderBy('tambahan_ke', 'asc')
+        ->get()
+        ->groupBy('tambahan_ke');
 
         foreach ($grouped as $ke => $rows) {
             $detail = $rows->map(function ($r) use ($produkMap) {
@@ -294,6 +309,7 @@ public function loadProduks(Request $request)
                     'patokan'      => $patokan,
                     'qty_tong'     => $qtyTong,
                     'konversi'     => (int) round($qtyTong * $patokan),
+                    'keterangan'   => $r->ket,   // <--- ini yang dipakai HP
                 ];
             })->filter(fn($x) => (float)$x['qty_tong'] !== 0.0)->sortBy('nama')->values();
 

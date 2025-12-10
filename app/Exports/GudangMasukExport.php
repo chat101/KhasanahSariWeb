@@ -29,14 +29,14 @@ class GudangMasukExport implements FromCollection, WithHeadings, WithStyles, Wit
     public function collection()
     {
 
-        return Purchasing_Details::with('purchasing.gudangmasuk.details.barang', 'purchasing.gudangmasuk.supplier')
-        ->whereHas('purchasing.gudangmasuk', function ($query) {
+        return Purchasing_Details::with('purchasing.gudang_masuk.details.barang', 'purchasing.gudang_masuk.supplier')
+        ->whereHas('purchasing.gudang_masuk', function ($query) {
             $query->whereBetween('tanggal', [$this->tanggalAwal, $this->tanggalAkhir]);
         })
         ->get()
         ->map(function ($detailPurchasing) {
             $purchasing = $detailPurchasing->purchasing;
-            $gudang = $purchasing->gudangMasuk ?? null;
+            $gudang = $purchasing->gudang_masuk ?? null;
             $supplier = $gudang?->supplier;
 
             // cari detail gudang yang sesuai dengan barang pada purchasing detail

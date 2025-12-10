@@ -230,8 +230,10 @@ class ProduksiMingguan extends Component
         /** ---------- SUBTOTAL & GRANDTOTAL ---------- */
         $makeSubtotal = function ($items, string $label) {
             $sum = fn($key) => (float) $items->sum($key);
+
             $sum_target = $sum('total_target_produksi');
-            $sum_real = $sum('real_total');
+            $sum_real   = $sum('real_total');
+
             return [
                 'nama' => $label,
                 'jenis' => '',
@@ -241,21 +243,27 @@ class ProduksiMingguan extends Component
                 'real_total' => $sum_real,
                 'target_vs_real' => $sum_real - $sum_target,
                 'percent_target_vs_real' => $sum_target > 0 ? (($sum_real - $sum_target) / $sum_target) * 100 : 0,
+
                 'po_pengalihan' => $sum('po_pengalihan'),
                 'returjadi' => $sum('returjadi'),
                 'returproduksi' => $sum('returproduksi'),
                 'totalretur' => $sum('totalretur'),
+
+                // 🔥 PERHITUNGAN PERSENRETUR YANG BENAR
+                'persenretur' => $sum_real > 0
+                    ? ($sum('totalretur') / $sum_real) * 100
+                    : 0,
+
                 'dist' => $sum('dist'),
                 'complain' => $sum('complain'),
                 'sample' => $sum('sample'),
                 'hpp' => $sum('hpp'),
-                'persenretur' => $sum('persenretur'),
                 'realvsdist' => $sum('realvsdist'),
+
                 'is_subtotal' => str_starts_with($label, 'Subtotal'),
                 'is_grandtotal' => $label === 'GRAND TOTAL',
             ];
         };
-
         $subtotalNonCake = $makeSubtotal($nonCake, 'Subtotal NON-CAKE');
         $subtotalCake = $makeSubtotal($cake, 'Subtotal CAKE');
         $grandTotal = $makeSubtotal($nonCake->merge($cake), 'GRAND TOTAL');

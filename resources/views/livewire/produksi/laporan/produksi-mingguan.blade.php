@@ -151,7 +151,7 @@
                                 <td class="px-2 py-2">Rp {{ number_format((float) ($row['hpp'] ?? 0), 2, ',', '.') }}
                                 </td>
                                 <td class="px-2 py-2">
-                                    {{ number_format((float) ($row['persenretur'] ?? 0), 1, ',', '.') }}%</td>
+                                    {{ number_format((float) ($row['persenretur'] ?? 0), 2, ',', '.') }}%</td>
                             </tr>
                         @empty
                             <tr>

@@ -32,9 +32,10 @@ use App\Livewire\Produksi\HasilPoprok;
 
 use App\Livewire\Produksi\HasilCounter;
 
+use App\Livewire\Purchasing\RekapMasuk;
 use App\Livewire\Finance\MasterRekening;
-use App\Livewire\Laporan\LapBarangMasuk;
 
+use App\Livewire\Laporan\LapBarangMasuk;
 use App\Livewire\Produksi\Produktivitas;
 use App\Livewire\Produksi\SettingBagian;
 use App\Livewire\Finance\BiayaInputPusat;
@@ -43,23 +44,38 @@ use App\Livewire\Gudang\RekapInputGudang;
 use App\Livewire\Produksi\MachineProduct;
 use App\Livewire\Produksi\RekapWorkorder;
 use App\Livewire\Produksi\StokAwalOpname;
+use App\Livewire\Purchasing\PiutangIndex;
+
 use App\Livewire\Finance\UangMasukPeriode;
 use App\Livewire\Produksi\HasilDistribusi;
-
 use App\Livewire\Produksi\PenyesuaianStok;
 use App\Livewire\Purchasing\SupplierMasuk;
+use App\Livewire\Accounting\MasterKasIndex;
 use App\Livewire\Produksi\PerintahProduksi;
 use App\Livewire\Produksi\SelesaikanDivisi;
 use App\Livewire\Produksi\Laporan\LapHarian;
 use App\Livewire\Produksi\OpnamePenyesuaian;
+use App\Livewire\Accounting\MonitorBiayaToko;
 use App\Livewire\Produksi\InputSelesaiDivisi;
+use App\Livewire\Accounting\MasterRoleCoaIndex;
+
+use App\Livewire\Accounting\InputTransaksiJurnal;
+//route accounting
+use App\Livewire\Accounting\MasterAkunBiayaIndex;
 use App\Livewire\Produksi\DaftarPerintahProduksi;
+use App\Livewire\Accounting\Bank\Edit as BankEdit;
 use App\Livewire\Produksi\Laporan\ProduksiMingguan;
+use App\Livewire\Accounting\Bank\Index as BankIndex;
 use App\Livewire\Produksi\Laporan\JamSelesaiBulanan;
 use App\Livewire\Produksi\Laporan\LaporanJamSelesai;
-use App\Livewire\Produksi\Laporan\LaporanHasilProduksi;
-
 use App\Livewire\Teknisi\TicketTeknisiWebController;
+use App\Livewire\Accounting\Bank\Create as BankCreate;
+use App\Livewire\Accounting\MasterJenisTransaksiIndex;
+use App\Livewire\Accounting\MasterTemplateJurnalIndex;
+use App\Livewire\Accounting\Transaction\Edit as TxEdit;
+use App\Livewire\Produksi\Laporan\LaporanHasilProduksi;
+use App\Livewire\Accounting\Transaction\Index as TxIndex;
+use App\Livewire\Accounting\Transaction\Create as TxCreate;
 
 Route::middleware(['auth']) // jika perlu
     ->get('/admin/slides', \App\Livewire\Slides\Manage::class)
@@ -91,9 +107,16 @@ Route::middleware(['auth']) // jika perlu
 
     // Route barang
     Route::get('barangmasuk', InputBrgMsk::class)->name('brgmsk');
-    Route::get('listsuppmasuk', SupplierMasuk::class)->name('listsuppmasuk');
     Route::get('lapbrgmsk', LapBarangMasuk::class)->name('lapbrgmsk');
     Route::get('rekapbrgmsk', RekapInputGudang::class)->name('rekapbrgmsk');
+
+            // Route finance
+        Route::get('listsuppmasuk', SupplierMasuk::class)->name('listsuppmasuk');
+        Route::get('rekapinputsuppmasuk', RekapMasuk::class)->name('rekapinputsuppmasuk');
+        // routes/web.php
+        Route::get('/hutangsupp', PiutangIndex::class)->name('hutangsupp');
+
+
 
             // Route Produksi
             Route::get('produktifitas', Produktivitas::class)->name('produktifitas');
@@ -122,24 +145,38 @@ Route::middleware(['auth']) // jika perlu
     Route::get('hslpoprok/{perintah_id}', HasilPoprok::class)->name('hslpoprok');
     Route::get('hslcounter/{perintah_id}', HasilCounter::class)->name('hslcounter');
 
+  // Route Accounting
+  Route::prefix('bank')->group(function () {
+    Route::get('/', BankIndex::class)->name('bank.index');
+    Route::get('/create', BankCreate::class)->name('bank.create');
+    Route::get('/{bank}/edit', BankEdit::class)->name('bank.edit');
+    Route::get('/monitor-biaya', MonitorBiayaToko::class)->name('monitor-biaya');
 
+    Route::get('/keuangan/jurnal/input', InputTransaksiJurnal::class)
+    ->name('keuangan.jurnal.input');
+    Route::get('/keuangan/master-jenis-transaksi', MasterJenisTransaksiIndex::class)
+    ->name('keuangan.master-jenis-transaksi');
+    Route::get('/keuangan/master-akun-biaya', MasterAkunBiayaIndex::class)
+    ->name('keuangan.master-akun-biaya');
+    Route::get('/keuangan/master-kas', MasterKasIndex::class)
+    ->name('keuangan.master-kas');
+    Route::get('/keuangan/master-template-jurnal', MasterTemplateJurnalIndex::class)
+    ->name('keuangan.master-template-jurnal');
+    Route::get('/keuangan/master-role-coa', MasterRoleCoaIndex::class)
+    ->name('keuangan.master-role-coa');
+});
 
-
-
-
+Route::prefix('transaksi')->group(function () {
+    Route::get('/', TxIndex::class)->name('transaksi.index');
+    Route::get('/create', TxCreate::class)->name('transaksi.create');
+    Route::get('/{bankTransaction}/edit', TxEdit::class)->name('transaksi.edit');
+});
         // Route Finance
         Route::get('uangmsk', SetoranMasuk::class)->name('uangmsk');
         Route::get('uangmskperiode', UangMasukPeriode::class)->name('uangmskperiode');
         Route::get('biayainputpusat', BiayaInputPusat::class)->name('biayainputpusat');
         Route::get('bayarpiutang', BayarPiutang::class)->name('bayarpiutang');
         Route::get('masterrekening', MasterRekening::class)->name('masterrekening');
-
-
-
-
-
-
-
 });
 
 

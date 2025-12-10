@@ -2,12 +2,13 @@
 
 namespace App\Jobs;
 
-use App\Services\ExpoPushService;
 use Illuminate\Bus\Queueable;
+use App\Services\ExpoPushService;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 
 class SendExpoPush implements ShouldQueue
 {
@@ -29,6 +30,14 @@ class SendExpoPush implements ShouldQueue
 
     public function handle(ExpoPushService $expo): void
     {
+        Log::info('SendExpoPush HANDLE called', [
+            'tokens' => $this->tokens,
+            'title'  => $this->title,
+            'body'   => $this->body,
+            'data'   => $this->data,
+            'channelId' => $this->channelId,
+        ]);
+
         /** @var \App\Services\ExpoPushService $expo */
 
         // Filter token valid

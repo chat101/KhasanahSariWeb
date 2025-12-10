@@ -109,8 +109,9 @@
           <div>
             <div class="text-xs font-medium text-gray-600 mb-1">Saat ini</div>
             <div class="aspect-[2/1] w-full overflow-hidden rounded-xl bg-gray-100 ring-1 ring-gray-200">
-              @if($existing_image_path)
-                <img src="{{ Storage::url($existing_image_path) }}" alt="Gambar saat ini"
+                @if($existing_image_path)
+                <img src="{{ url('api/slide-file/' . ltrim($existing_image_path, '/')) }}"
+                     alt="Gambar saat ini"
                      class="h-full w-full object-cover">
               @else
                 <div class="h-full w-full grid place-items-center text-xs text-gray-400">Tidak ada</div>
@@ -161,7 +162,14 @@
             <tr class="hover:bg-gray-50">
               <td class="px-4 py-3">{{ $s->id }}</td>
               <td class="px-4 py-3">
-                <img src="{{ $s->url }}" class="h-12 w-24 rounded-lg object-cover ring-1 ring-gray-200">
+                @if($s->image_url)
+                  <img src="{{ $s->image_url }}"
+                       class="h-12 w-24 rounded-lg object-cover ring-1 ring-gray-200">
+                @else
+                  <div class="h-12 w-24 rounded-lg bg-gray-100 grid place-items-center text-[10px] text-gray-400">
+                    Tidak ada
+                  </div>
+                @endif
               </td>
               <td class="px-4 py-3">{{ $s->title }}</td>
               <td class="px-4 py-3 max-w-[260px]">

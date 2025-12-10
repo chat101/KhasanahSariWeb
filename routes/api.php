@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\HasilRejectController;
 use App\Http\Controllers\Api\PenguranganController;
 use App\Http\Controllers\Api\RejectPhotoController;
 use App\Http\Controllers\Api\SelesaiDivisiController;
+use App\Http\Controllers\Api\SlideController as ApiSlideController;
 use App\Http\Controllers\Api\TicketTeknisiController;
 
 // --- Public endpoints (no auth) ---
@@ -36,7 +37,10 @@ Route::post('/selesai-divisi/group',[SelesaiDivisiController::class, 'saveGroup'
 Route::post('/auth/login',          [AuthController::class, 'login']);
 
 
-Route::get('/slides', [SlideController::class, 'index']); // => /api/slides
+
+Route::get('/slides', [SlideController::class, 'index']);
+Route::get('/slide-file/{path}', [SlideController::class, 'show'])
+    ->where('path', '.*');
 
 
 // Debug echo (boleh dipertahankan saat dev)
@@ -120,10 +124,13 @@ Route::post('/pengalihan',          [PengalihanController::class, 'store']);
 Route::delete('/pengalihan/{id}',   [PengalihanController::class, 'destroy']);
 
 Route::get('/produks/all',          [PengalihanController::class, 'allProducts']);
-
+Route::get('/slide-file/{path}', [UploadController::class, 'show'])
+    ->where('path', '.*');
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tickets', [TicketTeknisiController::class, 'store']);
     Route::post('/upload', [UploadController::class, 'store']);
+    Route::put('/tickets/{ticket}/user-close', [TicketTeknisiController::class, 'userClose']);
+
 });
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tickets', [TicketTeknisiController::class, 'index']);

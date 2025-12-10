@@ -18,6 +18,7 @@ class TicketTeknisi extends Model
         'photo_paths',
         'category',
         'status',
+        'user_close_at',
         'action_note',
         'handled_at',
         'closed_at',
@@ -26,6 +27,7 @@ class TicketTeknisi extends Model
     protected $casts = [
         'handled_at' => 'datetime',
         'closed_at'  => 'datetime',
+        'user_close_at'  => 'datetime',
         'photo_paths' => 'array',
     ];
 

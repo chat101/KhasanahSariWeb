@@ -18,4 +18,9 @@ class MasterSupplier extends Model
     {
         return $this->hasMany(Gudang_Masuk::class, 'supplier_id', 'id');
     }
+      // optional: accessor biar gampang ambil nama supplier
+      public function getSupplierNameAttribute()
+      {
+          return $this->gudang_masuk->supplier->nmsupp ?? null;
+      }
 }

@@ -21,52 +21,61 @@
             </flux:navlist.group>
             {{-- Grup Master --}}
             @menugroup('MasterData')
-            <flux:navlist.group expandable heading="Master Data" class="grid">
-              @menuitem('masterdata', 'muser')
-                <flux:navlist.item icon="home" :href="route('muser')" :current="request()->routeIs('muser')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                  {{ __('Master User') }}
-                </flux:navlist.item>
-              @endmenuitem
+                <flux:navlist.group expandable heading="MASTER DATA" class="grid">
+                    @menuitem('masterdata', 'muser')
+                        <flux:navlist.item icon="home" :href="route('muser')" :current="request()->routeIs('muser')"
+                            wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master User') }}
+                        </flux:navlist.item>
+                    @endmenuitem
 
-              @menuitem('masterdata', 'mtoko')
-                <flux:navlist.item icon="home" :href="route('mtoko')" :current="request()->routeIs('mtoko')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                  {{ __('Master Toko') }}
-                </flux:navlist.item>
-              @endmenuitem
+                    @menuitem('masterdata', 'mtoko')
+                        <flux:navlist.item icon="home" :href="route('mtoko')" :current="request()->routeIs('mtoko')"
+                            wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master Toko') }}
+                        </flux:navlist.item>
+                    @endmenuitem
 
-              @menuitem('masterdata', 'msupplier')
-                <flux:navlist.item icon="home" :href="route('msupplier')" :current="request()->routeIs('msupplier')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                  {{ __('Master Supplier') }}
-                </flux:navlist.item>
-              @endmenuitem
+                    @menuitem('masterdata', 'msupplier')
+                        <flux:navlist.item icon="home" :href="route('msupplier')" :current="request()->routeIs('msupplier')"
+                            wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master Supplier') }}
+                        </flux:navlist.item>
+                    @endmenuitem
 
-              @menuitem('masterdata', 'mbarang')
-                <flux:navlist.item icon="home" :href="route('mbarang')" :current="request()->routeIs('mbarang')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                  {{ __('Master Barang') }}
-                </flux:navlist.item>
-              @endmenuitem
+                    @menuitem('masterdata', 'mbarang')
+                        <flux:navlist.item icon="home" :href="route('mbarang')" :current="request()->routeIs('mbarang')"
+                            wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master Barang') }}
+                        </flux:navlist.item>
+                    @endmenuitem
 
-              @menuitem('masterdata', 'mproduk')
-                <flux:navlist.item icon="home" :href="route('mproduk')" :current="request()->routeIs('mproduk')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                  {{ __('Master Produk') }}
-                </flux:navlist.item>
-              @endmenuitem
-              @menuitem('masterdata', 'slides.manage')
-              <flux:navlist.item icon="home" :href="route('slides.manage')" :current="request()->routeIs('slides.manage')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                {{ __('Master Slide') }}
-              </flux:navlist.item>
-              @endmenuitem
-              @menuitem('masterdata', 'mesintoproduk')
-              <flux:navlist.item icon="home" :href="route('mesintoproduk')" :current="request()->routeIs('mesintoproduk')" wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                {{ __('Setting Produk Ke Mesin') }}
-              </flux:navlist.item>
-              @endmenuitem
-            </flux:navlist.group>
-          @endmenugroup
+                    @menuitem('masterdata', 'mproduk')
+                        <flux:navlist.item icon="home" :href="route('mproduk')" :current="request()->routeIs('mproduk')"
+                            wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master Produk') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('masterdata', 'slides.manage')
+                        <flux:navlist.item icon="home" :href="route('slides.manage')"
+                            :current="request()->routeIs('slides.manage')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master Slide') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('masterdata', 'mesintoproduk')
+                        <flux:navlist.item icon="home" :href="route('mesintoproduk')"
+                            :current="request()->routeIs('mesintoproduk')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Setting Produk Ke Mesin') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                </flux:navlist.group>
+            @endmenugroup
             {{-- Grup Gudang --}}
             @menugroup('Gudang')
                 <flux:navlist.group expandable
-                    :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="Gudang"
+                    :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="GUDANG"
                     class="grid">
                     <flux:navlist.item icon="home" :href="route('brgmsk')" :current="request()->routeIs('brgmsk')"
                         wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
@@ -82,15 +91,98 @@
             @menugroup('Purchasing')
                 {{-- Grup Purchasing --}}
                 <flux:navlist.group expandable
-                    :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="Purchasing"
+                    :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="PURCHASING"
                     class="grid">
                     <flux:navlist.item icon="home" :href="route('listsuppmasuk')"
                         :current="request()->routeIs('listsuppmasuk')" wire:navigate
                         class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                         {{ __('Supplier Masuk') }}
                     </flux:navlist.item>
+                    <flux:navlist.item icon="home" :href="route('rekapinputsuppmasuk')"
+                        :current="request()->routeIs('rekapinputsuppmasuk')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Rekap Input Masuk') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="home" :href="route('hutangsupp')"
+                        :current="request()->routeIs('hutangsupp')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Hutang Supplier') }}
+                    </flux:navlist.item>
                 </flux:navlist.group>
             @endmenugroup
+
+            {{-- Grup Accoounting --}}
+            @menugroup('ACCOUNTING')
+                <flux:navlist.group expandable
+                    :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="ACCOUNTING"
+                    class="grid">
+                    @menuitem('ACCOUNTING', 'bank.index')
+                        <flux:navlist.item icon="home" :href="route('bank.index')"
+                            :current="request()->routeIs('bank.index')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('MASTER BANK') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('ACCOUNTING', 'keuangan.master-jenis-transaksi')
+                        <flux:navlist.item icon="home" :href="route('keuangan.master-jenis-transaksi')"
+                            :current="request()->routeIs('keuangan.master-jenis-transaksi')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('MASTER JENIS TRANSAKSI') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('ACCOUNTING', 'keuangan.master-akun-biaya')
+                    <flux:navlist.item icon="home" :href="route('keuangan.master-akun-biaya')"
+                        :current="request()->routeIs('keuangan.master-akun-biaya')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('MASTER AKUN BIAYA') }}
+                    </flux:navlist.item>
+                      @endmenuitem
+                      @menuitem('ACCOUNTING', 'keuangan.master-kas')
+                      <flux:navlist.item icon="home" :href="route('keuangan.master-kas')"
+                          :current="request()->routeIs('keuangan.master-kas')" wire:navigate
+                          class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                          {{ __('MASTER KAS') }}
+                      </flux:navlist.item>
+                        @endmenuitem
+                        @menuitem('ACCOUNTING', 'keuangan.master-template-jurnal')
+                        <flux:navlist.item icon="home" :href="route('keuangan.master-template-jurnal')"
+                            :current="request()->routeIs('keuangan.master-template-jurnal')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('MASTER TEMPLATE JURNAL') }}
+                        </flux:navlist.item>
+                          @endmenuitem
+                          @menuitem('ACCOUNTING', 'keuangan.master-role-coa')
+                          <flux:navlist.item icon="home" :href="route('keuangan.master-role-coa')"
+                              :current="request()->routeIs('keuangan.master-role-coa')" wire:navigate
+                              class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                              {{ __('MASTER ROLE COA') }}
+                          </flux:navlist.item>
+                            @endmenuitem
+                    @menuitem('ACCOUNTING', 'transaksi.index')
+                        <flux:navlist.item icon="home" :href="route('transaksi.index')"
+                            :current="request()->routeIs('transaksi.index')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('BUKU BANK') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('ACCOUNTING', 'monitor-biaya')
+                        <flux:navlist.item icon="home" :href="route('monitor-biaya')"
+                            :current="request()->routeIs('monitor-biaya')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('MONITOR BIAYA') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('ACCOUNTING', 'keuangan.jurnal.input')
+                        <flux:navlist.item icon="home" :href="route('keuangan.jurnal.input')"
+                            :current="request()->routeIs('keuangan.jurnal.input')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Jurnal Input') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                </flux:navlist.group>
+            @endmenugroup
+
+
             {{-- Grup Finance --}}
             @menugroup('FINANCE')
                 <flux:navlist.group expandable
@@ -210,19 +302,19 @@
             @endmenugroup
 
             @menugroup('TEKNISI')
-            <flux:navlist.group expandable
-                :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="TEKNISI"
-                class="grid">
-                @menuitem('TEKNISI', 'ticket.web.create')
-                    <flux:navlist.item icon="home" :href="route('ticket.web.create')"
-                        :current="request()->routeIs('ticket.web.create')" wire:navigate
-                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                        {{ __('Tiket Teknisi') }}
-                    </flux:navlist.item>
-                @endmenuitem
+                <flux:navlist.group expandable
+                    :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="TEKNISI"
+                    class="grid">
+                    @menuitem('TEKNISI', 'ticket.web.create')
+                        <flux:navlist.item icon="home" :href="route('ticket.web.create')"
+                            :current="request()->routeIs('ticket.web.create')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Tiket Teknisi') }}
+                        </flux:navlist.item>
+                    @endmenuitem
 
-            </flux:navlist.group>
-        @endmenugroup
+                </flux:navlist.group>
+            @endmenugroup
             {{-- Grup Laporan --}}
             @menugroup('LAPORAN')
                 <flux:navlist.group expandable
@@ -250,12 +342,12 @@
                         </flux:navlist.item>
                     @endmenuitem
                     @menuitem('LAPORAN', 'lap-prod-hari')
-                    <flux:navlist.item icon="home" :href="route('lap-prod-hari')"
-                        :current="request()->routeIs('lap-prod-minggu')" wire:navigate
-                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                        {{ __('Produksi Harian') }}
-                    </flux:navlist.item>
-                @endmenuitem
+                        <flux:navlist.item icon="home" :href="route('lap-prod-hari')"
+                            :current="request()->routeIs('lap-prod-minggu')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Produksi Harian') }}
+                        </flux:navlist.item>
+                    @endmenuitem
                     @menuitem('LAPORAN', 'ketepatanwkt')
                         <flux:navlist.item icon="home" :href="route('ketepatanwkt')"
                             :current="request()->routeIs('ketepatanwkt')" wire:navigate
