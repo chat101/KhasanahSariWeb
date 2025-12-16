@@ -68,4 +68,5 @@ class Purchasing extends Model
             });
     }
     //Catatan: kalau status_bayar Anda 1 = lunas, 0 = belum → nanti kita update ke 1 kalau sisa hutang sudah 0.
+
 }

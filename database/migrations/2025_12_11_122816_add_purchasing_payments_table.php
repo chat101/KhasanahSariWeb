@@ -13,18 +13,14 @@ return new class extends Migration
     {
         Schema::create('purchasing_payments', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('purchasing_id');
-            $table->date('tanggal_bayar');
-            $table->decimal('jumlah_bayar', 18, 2);
-            $table->string('metode_bayar')->nullable();   // Kas Kecil / Kas Bank, dll
+            $table->foreignId('purchasing_id')->constrained('purchasing');
+            $table->date('tgl_bayar');
+            $table->decimal('jumlah_bayar', 15, 2);
+            $table->string('metode_bayar')->nullable();   // Kas / Bank / dll
             $table->string('no_bukti')->nullable();       // No bukti kas / bank
             $table->text('keterangan')->nullable();
-            $table->timestamps();
             $table->unsignedBigInteger('user_id')->nullable();
-            $table->foreign('purchasing_id')
-                  ->references('id')
-                  ->on('purchasing')
-                  ->onDelete('cascade');
+            $table->timestamps();
         });
     }
 
@@ -33,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('purchasing_payments');
+        //
     }
 };

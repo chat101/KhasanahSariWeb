@@ -30,7 +30,7 @@ class MonitorBiayaToko extends Component
 
     public function mount()
     {
-        $this->listToko = MasterToko::whereNull('status')
+        $this->listToko = MasterToko::where('status', '1')
             ->orderBy('nmtoko')
             ->get();
 
@@ -65,7 +65,15 @@ class MonitorBiayaToko extends Component
 
         $this->dispatch('swal:success', 'Berhasil', 'Realisasi & penjualan berhasil di-sync dari API.');
     }
+    private function extractDeskripsi(?string $ket): ?string
+    {
+        if (! $ket) return null;
 
+        // ambil sebelum "XpX"
+        $parts = explode('XpX', $ket, 2);
+
+        return trim($parts[0] ?? $ket);
+    }
     private function syncSatuToko(MasterToko $toko)
     {
         // ==========================
@@ -112,7 +120,8 @@ class MonitorBiayaToko extends Component
 
                 $first = $rows->first();
                 $tipe  = is_array($first) ? ($first['tipe'] ?? null) : ($first->tipe ?? null);
-                $ket   = is_array($first) ? ($first['ket']  ?? null) : ($first->ket  ?? null);
+                $ketRaw = is_array($first) ? ($first['ket'] ?? null) : ($first->ket ?? null);
+                $ket    = $this->extractDeskripsi($ketRaw);
 
                 BudgetBiaya::updateOrCreate(
                     [
@@ -284,7 +293,7 @@ class MonitorBiayaToko extends Component
                     $this->fallbackInfo[$row->idakun_api] =
                         'Pakai budget bulan ' .
                         \Carbon\Carbon::createFromDate($fb['tahun'], $fb['bulan'], 1)
-                            ->translatedFormat('F Y');
+                        ->translatedFormat('F Y');
                 } else {
                     $this->fallbackInfo[$row->idakun_api] = null;
                 }
@@ -493,5 +502,4 @@ class MonitorBiayaToko extends Component
             'totalPenjualan' => $this->totalPenjualan,
         ]);
     }
-
 }

@@ -30,53 +30,58 @@ class GudangMasukExport implements FromCollection, WithHeadings, WithStyles, Wit
     {
 
         return Purchasing_Details::with('purchasing.gudang_masuk.details.barang', 'purchasing.gudang_masuk.supplier')
-        ->whereHas('purchasing.gudang_masuk', function ($query) {
-            $query->whereBetween('tanggal', [$this->tanggalAwal, $this->tanggalAkhir]);
-        })
-        ->get()
-        ->map(function ($detailPurchasing) {
-            $purchasing = $detailPurchasing->purchasing;
-            $gudang = $purchasing->gudang_masuk ?? null;
-            $supplier = $gudang?->supplier;
+            ->whereHas('purchasing.gudang_masuk', function ($query) {
+                $query->whereBetween('tanggal', [$this->tanggalAwal, $this->tanggalAkhir]);
+            })
+            ->get()
+            ->map(function ($detailPurchasing) {
+                $purchasing = $detailPurchasing->purchasing;
+                $gudang = $purchasing->gudang_masuk ?? null;
+                $supplier = $gudang?->supplier;
 
-            // cari detail gudang yang sesuai dengan barang pada purchasing detail
-            $detailGudang = $gudang?->details
-                ->where('barang_id', $detailPurchasing->barang_id)
-                ->first();
+                // cari detail gudang yang sesuai dengan barang pada purchasing detail
+                $detailGudang = $gudang?->details
+                    ->where('barang_id', $detailPurchasing->barang_id)
+                    ->first();
 
-            $diskon = $detailPurchasing->diskon ;
-            $ttlbersih = $detailPurchasing->total;
-            $ppn = $detailPurchasing->ppn / 100 ;
-            $gramasi = $detailGudang->gramasi ?? 0 ;
-            $qty = $detailGudang->qty ?? 0;
-            $ttlblmdisc = $qty * $detailPurchasing->harga;
-            $ttlsetelahdic = ($ttlblmdisc - $diskon);
-            $ppnsetelahdic = ($ttlblmdisc - $diskon) * $ppn;
-            $pembelian = $ttlsetelahdic + $ppnsetelahdic;
-            $totalgram = $gramasi * $qty;
+                $diskon   = $detailPurchasing->diskon;
+                $ppn      = $detailPurchasing->ppn / 100;
 
-            return [
-                $gudang->tanggal ?? '-',  //TANGGAL
-                $detailGudang->barang->barang_id ?? '-', //ID BARANG
-                $detailGudang->barang->nmbarang ?? '-', //NAMA BARANG
-                $gudang->supplier->supplier_id ?? '-', //ID SUPPLIER
-                $supplier->nmsupp ?? '-', //SUPPLIER
-                $gudang->no_faktur ?? '-', //VALID KODE
-                $detailGudang->barang->nmbarang ?? '-', //URAIAN
-                $detailPurchasing->qty ?? 0, //QTY
-                $detailPurchasing->satuan ?? '-', //UNIT
-                $detailPurchasing->harga ?? 0, //HARGA
-                $ttlblmdisc ?? 0, //TOTAL
-                $ppnsetelahdic, //PPN (af Disc )
-                $ttlsetelahdic, //DPP
-                $detailPurchasing->diskon ?? 0, //DISKON
-                $pembelian, //PEMBELIAN
-                $gudang->no_po ?? '-', //KETERANGAN
-                $gramasi, //gramasi
-                $totalgram, //ttlgramasi
-            ];
-        });
-}
+                // pakai QTY dari purchasing untuk hitung nilai uang
+                $qty      = $detailPurchasing->qty ?? 0;
+
+                // gramasi masih boleh ambil dari gudang (per dus/pcs)
+                $gramasi  = $detailGudang->gramasi ?? 0;
+
+                $ttlblmdisc   = $qty * ($detailPurchasing->harga ?? 0);
+                $ttlsetelahdic = $ttlblmdisc - $diskon;
+                $ppnsetelahdic = $ttlsetelahdic * $ppn;
+                $pembelian     = $ttlsetelahdic + $ppnsetelahdic;
+                $totalgram     = $gramasi * $qty;
+
+                return [
+                    $gudang->tanggal ?? '-',                // TANGGAL
+                    $detailGudang->barang->barang_id ?? '-', // ID BARANG
+                    $detailGudang->barang->nmbarang ?? '-',  // NAMA BARANG
+                    $gudang->supplier->supplier_id ?? '-',   // ID SUPPLIER
+                    $supplier->nmsupp ?? '-',                // SUPPLIER
+                    $gudang->no_faktur ?? '-',               // VALID KODE
+                    $detailGudang->barang->nmbarang ?? '-',  // URAIAN
+                    $qty,                                    // QTY  <-- ini sudah purchasing
+                    $detailPurchasing->satuan ?? '-',        // UNIT
+                    $detailPurchasing->harga ?? 0,           // HARGA
+                    $ttlblmdisc,                             // TOTAL
+                    $ppnsetelahdic,                          // PPN (af Disc)
+                    $ttlsetelahdic,                          // DPP
+                    $detailPurchasing->diskon ?? 0,          // DISKON
+                    $pembelian,                              // PEMBELIAN
+                    $gudang->no_po ?? '-',                   // KETERANGAN
+                    $gramasi,                                // gramasi
+                    $totalgram,                              // ttlgramasi
+                ];
+
+            });
+    }
 
     public function headings(): array
     {

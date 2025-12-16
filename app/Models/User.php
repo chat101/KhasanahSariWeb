@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Models\Operasional\Area;
+use App\Models\Operasional\Wilayah;
 use App\Models\Produksi\HasilDivisi;
 use App\Models\Produksi\MasterDivisi;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,7 +25,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $fillable = ['name', 'email', 'password', 'role','divisi_id'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'divisi_id', 'area_id', 'wilayah_id'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -57,7 +59,7 @@ class User extends Authenticatable
         return [
             // Admin: semua grup & semua item (tidak batasi item)
             'admin' => [
-                'groups' => ['masterdata', 'gudang',  'accounting','purchasing', 'finance', 'produksi','teknisi' ,'laporan'],
+                'groups' => ['masterdata', 'gudang',  'accounting', 'purchasing', 'finance', 'produksi', 'teknisi', 'laporan','operasional'],
                 'items'  => [], // kosong = semua item pada grup yang diizinkan
             ],
             'manager_finance' => [
@@ -68,20 +70,18 @@ class User extends Authenticatable
             // dan DI DALAMNYA hanya beberapa item
 
             'adminproduksi' => [
-                'groups' => ['masterdata','produksi', 'laporan'],
+                'groups' => ['masterdata', 'produksi', 'laporan'],
                 'items'  => [
                     'masterdata' => ['mproduk'],
-                    'laporan' => ['lap-has-prod', 'lap-prod-minggu', 'ketepatanwkt', 'ketepatanwktbln','lap-prod-hari'],
+                    'laporan' => ['lap-has-prod', 'lap-prod-minggu', 'ketepatanwkt', 'ketepatanwktbln', 'lap-prod-hari'],
 
-                     // <- route names
-                  // 'laporan'  => ['lap-has-prod','lap-prod-minggu'],
+                    // <- route names
+                    // 'laporan'  => ['lap-has-prod','lap-prod-minggu'],
                 ],
             ],
             'accounting' => [
                 'groups' => ['accounting'],
-                'items'  => [
-
-                ],
+                'items'  => [],
             ],
             // Gudang hanya grup Gudang & Laporan
             'gudang' => [
@@ -97,11 +97,11 @@ class User extends Authenticatable
                     'gudang' => ['brgmsk'],
                     'laporan' => ['lapbrgmsk'],
                     'purchasing' => ['listsuppmasuk'],
-                    'finance' => ['uangmsk','masterrekening','bayarpiutang','biayainputpusat'],
+                    'finance' => ['uangmsk', 'masterrekening', 'bayarpiutang', 'biayainputpusat'],
                 ],
             ],
             'leaderproduksi' => [
-                'groups' => ['produksi','masterdata'],
+                'groups' => ['produksi', 'masterdata'],
                 'items'  => [
                     'produksi' => ['selesaikanjob', 'produktifitas', 'work-order'],
                     'masterdata' => ['mproduk'],
@@ -109,9 +109,12 @@ class User extends Authenticatable
                 ],
             ],
             'teknisi' => [
-                'groups' => ['produksi','teknisi'],
-                'items'  => [
-                ],
+                'groups' => ['produksi', 'teknisi'],
+                'items'  => [],
+            ],
+            'area' => [
+                'groups' => ['masterdata',  'operasional','accounting', 'laporan'],
+                'items'  => [], // kosong = semua item pada grup yang diizinkan
             ],
         ];
     }
@@ -122,17 +125,7 @@ class User extends Authenticatable
     {
         return Str::of($this->name)->explode(' ')->map(fn(string $name) => Str::of($name)->substr(0, 1))->implode('');
     }
-    // public function allowedMenuGroups(): array
-    // {
-    //     return match (strtolower($this->role ?? '')) {
-    //         'admin' => ['master data', 'gudang', 'purchasing', 'produksi', 'laporan'],
-    //         'produksi' => ['produksi', 'laporan'],
-    //         'leaderproduksi' => ['produksi', 'laporan'],
-    //         'gudang' => ['gudang', 'laporan'],
-    //         'purchasing' => ['purchasing', 'laporan'],
-    //         default => [],
-    //     };
-    // }
+
 
     public function canSeeGroup(string $heading): bool
     {
@@ -193,10 +186,59 @@ class User extends Authenticatable
         return $this->hasMany(HasilDivisi::class, 'user_id');
     }
     public function scopeDivisi($q, string $namaDivisi)
+    {
+        return $q->whereHas('divisi', function ($d) use ($namaDivisi) {
+            $d->where('nama_divisi', $namaDivisi);
+        });
+    }
+
+//     auth()->user()->area?->nama_area;
+// auth()->user()->wilayah?->nama_wilayah;
+    public function area()
+    {
+        return $this->belongsTo(Area::class, 'area_id');
+    }
+
+ /**
+ * Wilayah efektif user:
+ * - kalau punya area → wilayah dari area
+ * - kalau punya wilayah → wilayah langsung
+ */
+public function wilayahLangsung()
 {
-    return $q->whereHas('divisi', function($d) use ($namaDivisi) {
-        $d->where('nama_divisi', $namaDivisi);
-    });
+    return $this->belongsTo(Wilayah::class, 'wilayah_id');
+}
+public function wilayah()
+{
+    if ($this->area_id) {
+        return $this->area->wilayah();
+    }
+
+    return $this->wilayahLangsung();
+}
+
+public function scopeByUserWilayah($q, $user)
+{
+    if ($user->area_id) {
+        return $q->where('area_id', $user->area_id);
+    }
+
+    if ($user->wilayah_id) {
+        return $q->whereHas('area', function ($a) use ($user) {
+            $a->where('wilayah_id', $user->wilayah_id);
+        });
+    }
+
+    return $q; // admin pusat
+}
+public function getWilayahNamaAttribute()
+{
+    // kalau punya area, ambil wilayah dari area
+    if ($this->area) {
+        return $this->area->wilayah?->nama_wilayah;
+    }
+    // kalau tidak, ambil dari wilayah_id langsung
+    return $this->wilayahLangsung?->nama_wilayah;
 }
 
 }

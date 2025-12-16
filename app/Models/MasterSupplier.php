@@ -12,6 +12,12 @@ class MasterSupplier extends Model
         'nmsupp',
         'telpsupp',
         'suppalamat',
+
+        'tempo_hari',
+        'max_hutang',
+        'contact_person',
+        'email',
+        'is_aktif',
     ];
 
     public function gudangMasuks()

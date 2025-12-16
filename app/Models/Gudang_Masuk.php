@@ -33,6 +33,6 @@ class Gudang_Masuk extends Model
     }
     public function purchasing()
     {
-        return $this->hasOne(Purchasing::class, 'gudangmasuk_id');
+        return $this->hasOne(Purchasing::class, 'gudangmasuk_id', 'id');
     }
 }

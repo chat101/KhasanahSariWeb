@@ -84,7 +84,6 @@
             </div>
 
             {{-- Ringkasan (compact) --}}
-            {{-- Ringkasan (compact) --}}
             <div
                 class="px-3 py-2 grid grid-cols-1 md:grid-cols-4 gap-2 text-xs border-b border-gray-100 dark:border-zinc-700">
                 <div class="mt-0.5 text-xs font-semibold text-indigo-900 dark:text-indigo-50 truncate">
@@ -147,6 +146,7 @@
                                 <th class="px-2 py-1 text-left w-8">No</th>
                                 <th class="px-2 py-1 text-left w-16">ID Akun</th>
                                 <th class="px-2 py-1 text-left">Tipe</th>
+                                <th class="px-2 py-1 text-left">Deskripsi</th>
                                 <th class="px-2 py-1 text-right w-24">Budget</th>
                                 <th class="px-2 py-1 text-right w-24">Realisasi</th>
                                 <th class="px-2 py-1 text-right w-24">Sisa</th>
@@ -167,6 +167,9 @@
                                     <td class="px-2 py-1 align-middle whitespace-nowrap">{{ $row->idakun_api }}</td>
                                     <td class="px-2 py-1 align-middle truncate max-w-[140px]">
                                         {{ $row->tipe_api ?? '-' }}
+                                    </td>
+                                    <td class="px-2 py-1 align-middle truncate max-w-[180px]">
+                                        {{ $row->ket_api ?? '-' }}
                                     </td>
                                     <td class="px-2 py-1 align-middle text-right">
                                         {{ number_format($row->budget, 0, ',', '.') }}

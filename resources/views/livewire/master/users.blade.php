@@ -2,21 +2,21 @@
 
     {{-- Notifikasi --}}
     @if (session()->has('message'))
-    <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 3000)" x-show="show"
-        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2"
-        x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300"
-        x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-2"
-        class="fixed top-6 left-1/2 transform -translate-x-1/2 w-72 bg-green-500 text-white rounded-lg shadow z-50">
-        <div class="flex items-center justify-between px-3 py-2">
-            <span>{{ session('message') }}</span>
-            <button @click="show = false" class="text-white hover:text-gray-200">
-                ✕
-            </button>
+        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 3000)" x-show="show"
+            x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300"
+            x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-2"
+            class="fixed top-6 left-1/2 transform -translate-x-1/2 w-72 bg-green-500 text-white rounded-lg shadow z-50">
+            <div class="flex items-center justify-between px-3 py-2">
+                <span>{{ session('message') }}</span>
+                <button @click="show = false" class="text-white hover:text-gray-200">
+                    ✕
+                </button>
+            </div>
+            <div class="h-1 bg-white/30">
+                <div class="h-1 bg-white animate-toast-progress"></div>
+            </div>
         </div>
-        <div class="h-1 bg-white/30">
-            <div class="h-1 bg-white animate-toast-progress"></div>
-        </div>
-    </div>
     @endif
 
     {{-- Tombol Tambah --}}
@@ -49,28 +49,33 @@
                     <th class="px-3 py-2">Nama</th>
                     <th class="px-3 py-2">Email</th>
                     <th class="px-3 py-2">Role</th>
+                    <th class="px-3 py-2">Wilayah</th>
+                    <th class="px-3 py-2">Area</th>
                     <th class="px-3 py-2">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-300">
                 @forelse($users as $user)
-                <tr class="hover:bg-gray-200">
-                    <td class="px-3 py-2 text-xs">{{ ($users->currentPage() - 1) * $users->perPage() + $loop->iteration }}
-                    </td>
-                    <td class="px-3 py-2 text-xs">{{ $user->name }}</td>
-                    <td class="px-3 py-2 text-xs">{{ $user->email }}</td>
-                    <td class="px-3 py-2 text-xs">{{ $user->role }}</td>
-                    <td class="px-3 py-2 flex gap-1 text-xs">
-                        <button wire:click="edit({{ $user->id }})"
-                            class="bg-yellow-400 hover:bg-yellow-500 px-2 py-1 rounded-lg text-white text-xs">✎</button>
-                        <button onclick="confirmDelete({{ $user->id }})"
-                            class="bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg text-white text-xs">🗑</button>
-                    </td>
-                </tr>
+                    <tr class="hover:bg-gray-200">
+                        <td class="px-3 py-2 text-xs">
+                            {{ ($users->currentPage() - 1) * $users->perPage() + $loop->iteration }}
+                        </td>
+                        <td class="px-3 py-2 text-xs">{{ $user->name }}</td>
+                        <td class="px-3 py-2 text-xs">{{ $user->email }}</td>
+                        <td class="px-3 py-2 text-xs">{{ $user->role }}</td>
+                        <td class="px-3 py-2 text-xs">{{ $user->wilayah_nama ?? '-' }}</td>
+                        <td class="px-3 py-2 text-xs">{{ $user->area?->nama_area ?? '-' }}</td>
+                        <td class="px-3 py-2 flex gap-1 text-xs">
+                            <button wire:click="edit({{ $user->id }})"
+                                class="bg-yellow-400 hover:bg-yellow-500 px-2 py-1 rounded-lg text-white text-xs">✎</button>
+                            <button onclick="confirmDelete({{ $user->id }})"
+                                class="bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg text-white text-xs">🗑</button>
+                        </td>
+                    </tr>
                 @empty
-                <tr>
-                    <td colspan="5" class="text-center text-gray-500 py-3">Tidak ada data</td>
-                </tr>
+                    <tr>
+                        <td colspan="5" class="text-center text-gray-500 py-3">Tidak ada data</td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -97,7 +102,9 @@
                     <input type="text" id="nama" wire:model.defer="nama"
                         class="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring focus:ring-blue-400 text-sm"
                         placeholder="">
-                    @error('nama') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    @error('nama')
+                        <span class="text-red-500 text-xs">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 {{-- Nama 2 --}}
@@ -106,21 +113,60 @@
                     <input type="email" id="email" wire:model.defer="email"
                         class="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring focus:ring-blue-400 text-sm"
                         placeholder="Masukkan email">
-                    @error('email') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    @error('email')
+                        <span class="text-red-500 text-xs">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 {{-- Role --}}
                 <div>
                     <label for="role" class="block text-gray-600 mb-1">Role</label>
-                    <select id="role" wire:model.defer="role"
-                        class="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring focus:ring-blue-400 text-sm">
+                    <select id="role" wire:model.live.change="role"
+                    class="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring focus:ring-blue-400 text-sm">
                         <option value="">Pilih Role</option>
                         <option value="admin">Admin</option>
                         <option value="gudang">Gudang</option>
                         <option value="finance">Finance</option>
+                        <option value="wilayah">Wilayah</option>
+                        <option value="area">Area</option>
+
                     </select>
-                    @error('role') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    @error('role')
+                        <span class="text-red-500 text-xs">{{ $message }}</span>
+                    @enderror
                 </div>
+                @if (strtolower($role) === 'wilayah')
+                    <div>
+                        <label class="block text-gray-600 mb-1">Wilayah</label>
+                        <select wire:model.defer="wilayah_id"
+                            class="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 rounded-lg text-sm">
+                            <option value="">- Pilih Wilayah -</option>
+                            @foreach ($wilayahs as $w)
+                                <option value="{{ $w->id }}">{{ $w->nama_wilayah }}</option>
+                            @endforeach
+                        </select>
+                        @error('wilayah_id')
+                            <span class="text-red-500 text-xs">{{ $message }}</span>
+                        @enderror
+                    </div>
+                @endif
+                @if (strtolower($role) === 'area')
+                    <div>
+                        <label class="block text-gray-600 mb-1">Area</label>
+                        <select wire:model.defer="area_id"
+                            class="w-full px-3 py-2 bg-gray-100 border border-gray-300 text-gray-800 rounded-lg text-sm">
+                            <option value="">- Pilih Area -</option>
+                            @foreach ($areas as $a)
+                                <option value="{{ $a->id }}">
+                                    {{ $a->nama_area }} ({{ $a->wilayah?->nama_wilayah ?? '-' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('area_id')
+                            <span class="text-red-500 text-xs">{{ $message }}</span>
+                        @enderror
+                    </div>
+                @endif
             </div>
             <div x-data="{ showPassword: false }">
                 <label for="password" class="block text-gray-600 mb-1">Password</label>
@@ -130,8 +176,8 @@
                         placeholder="">
                     <button type="button" @click="showPassword = !showPassword"
                         class="absolute inset-y-0 right-3 flex items-center text-gray-500">
-                        <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
+                        <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -144,7 +190,9 @@
                         </svg>
                     </button>
                 </div>
-                @error('password') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                @error('password')
+                    <span class="text-red-500 text-xs">{{ $message }}</span>
+                @enderror
             </div>
             <div x-data="{ showPassword: false }">
                 <label for="konfirmasi_password" class="block text-gray-600 mb-1">Konfirmasi Password</label>
@@ -155,8 +203,8 @@
                         placeholder="">
                     <button type="button" @click="showPassword = !showPassword"
                         class="absolute inset-y-0 right-3 flex items-center text-gray-500">
-                        <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
+                        <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -169,14 +217,17 @@
                         </svg>
                     </button>
                 </div>
-                @error('konfirmasipassword') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                @error('konfirmasipassword')
+                    <span class="text-red-500 text-xs">{{ $message }}</span>
+                @enderror
             </div>
 
             {{-- Tombol Aksi --}}
             <div class="flex justify-end gap-2 mt-5">
                 <button wire:click="closeModal"
                     class="px-3 py-1 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm">Batal</button>
-                <button wire:click="store" class="px-3 py-1 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm">
+                <button wire:click="store"
+                    class="px-3 py-1 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm">
                     Simpan
                 </button>
             </div>
@@ -197,7 +248,9 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 // Kirim event ke Livewire 3 (tanpa Alpine)
-                window.Livewire.dispatch('delete-user', { id: userId });
+                window.Livewire.dispatch('delete-user', {
+                    id: userId
+                });
             }
         });
     }

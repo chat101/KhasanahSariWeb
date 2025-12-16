@@ -9,6 +9,7 @@ use App\Models\MasterBarang;
 use App\Models\MasterSupplier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class InputBrgMsk extends Component
 {
@@ -39,12 +40,19 @@ class InputBrgMsk extends Component
     {
         // dd(Auth::user()->name); // debug dulu
         $this->userName = Auth::user()->name;
-        $this->notrans = 'SUP' . now('Asia/Jakarta')->format('ymdHis');
+        $this->generateNotrans();              // 🔴 nomor pertama kali
         $this->tanggal = now('Asia/Jakarta')->format('Y-m-d');
         $this->suppliers = MasterSupplier::all();
         $this->supplier = ''; // default value
     }
-
+    protected function generateNotrans()
+    {
+        // versi simple pakai timestamp
+        // ganti prefix 'BM' sesuai kebutuhanmu
+        $this->notrans = 'SUP'
+        . now('Asia/Jakarta')->format('ymdHis')
+        . strtoupper(Str::random(3));
+    }
     public function render()
     {
         return view('livewire.gudang.input-brg-msk', [
@@ -120,12 +128,20 @@ class InputBrgMsk extends Component
             'gramasi' => $this->gramasi,
         ];
 
-        // Reset field input
-        $this->reset(['namabarang', 'qty', 'barangid', 'idbarang', 'satuan', 'gramasi']);
 
-        // Kirim rows ke JS untuk disimpan di localStorage
+    // reset field input
+    $this->barangid   = null;
+    $this->idbarang   = null;
+    $this->namabarang = '';
+    $this->qty        = null;
+    $this->satuan     = '';
+    $this->gramasi    = '';
 
-        $this->dispatch('updateLocalStorage', $this->rows);
+    // simpan ke localStorage (kalau kamu pakai)
+    $this->dispatch('updateLocalStorage', $this->rows);
+
+    // 🔴 PENTING: event untuk fokus ke Nama Barang
+    $this->dispatch('focus-nama-barang');
     }
     public function loadLocalRows($rows)
     {
@@ -211,6 +227,7 @@ class InputBrgMsk extends Component
             $this->rows = [];
             $this->dispatch('clear-localstorage');
             $this->reset(['no_faktur', 'supplier', 'no_po']);
+            $this->generateNotrans();  // 🔴 nomor transaksi BARU
         } catch (\Exception $e) {
             DB::rollBack();
             // logger()->error('Gagal menyimpan data barang masuk: ' . $e->getMessage()); // Log ke storage/logs

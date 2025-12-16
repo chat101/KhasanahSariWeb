@@ -60,17 +60,31 @@
 
     <!-- === HEADER === -->
     <header class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4 flex items-center justify-between rounded-lg shadow-lg">
-      <h1 class="text-2xl font-bold text-glow">Dashboard</h1>
-      <div class="flex items-center space-x-4">
-        <div class="flex items-center bg-white rounded-full px-3 py-1 shadow-lg glow-ring">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M5.121 17.804A8.963 8.963 0 0112 15c2.21 0 4.216.805 5.879 2.137M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-          <span class="ml-2 text-gray-800 font-medium">Hi, {{ auth()->user()->name }}</span>
+        <h1 class="text-2xl font-bold text-glow">Dashboard</h1>
+
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center bg-white rounded-full px-3 py-2 shadow-lg glow-ring">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 class="h-5 w-5 text-blue-500"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5.121 17.804A8.963 8.963 0 0112 15c2.21 0 4.216.805 5.879 2.137M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+
+            <div class="ml-2 leading-tight">
+              <div class="text-gray-800 font-medium text-sm">
+                Hi, {{ auth()->user()->name }}
+              </div>
+              <div class="text-[11px] text-gray-500">
+                {{ auth()->user()->wilayah?->nama_wilayah ?? '-' }}
+                •
+                {{ auth()->user()->area?->nama_area ?? '-' }}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
 
     <!-- === CONTENT / CARD === -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">

@@ -91,16 +91,41 @@ class SupplierMasuk extends Component
 
     private function sanitizeNumber($value): string
     {
-        if (empty($value)) return '0.00';
-        $value = str_replace(['.', ','], ['', '.'], (string)$value);
+        if ($value === null || $value === '') {
+            return '0.00';
+        }
+
+        $value = trim((string) $value);
+
+        $hasComma = strpos($value, ',') !== false;
+        $hasDot   = strpos($value, '.') !== false;
+
+        if ($hasComma && $hasDot) {
+            // contoh: "1.234,56" -> remove "." -> "1234,56" -> "," jadi "."
+            $value = str_replace('.', '', $value);
+            $value = str_replace(',', '.', $value);
+        } elseif ($hasComma && !$hasDot) {
+            // contoh: "1234,56" -> "1234.56"
+            $value = str_replace(',', '.', $value);
+        } else {
+            // hanya titik atau angka saja -> biarkan, anggap format DB normal
+            // "1234.56" atau "123456"
+        }
+
+        // buang karakter selain angka & titik
         $value = preg_replace('/[^0-9.]/', '', $value);
-        return number_format((float)$value, 2, '.', '');
+        if ($value === '' || $value === '.') {
+            $value = '0';
+        }
+
+        return number_format((float) $value, 2, '.', '');
     }
 
-    public function getGrandTotalProperty()
-    {
-        return array_reduce($this->total, fn($carry, $item) => $carry + (float)$item, 0);
-    }
+
+    // public function getGrandTotalProperty()
+    // {
+    //     return array_reduce($this->total, fn($carry, $item) => $carry + (float)$item, 0);
+    // }
 
     public function loadDraftFromLocalStorage()
     {
@@ -153,43 +178,57 @@ class SupplierMasuk extends Component
     }
 
     public function edit($id)
-    {
-        $this->selectedId = $id;
-        $data = Gudang_Masuk::with('supplier')->findOrFail($id);
+{
+    $this->selectedId = $id;
+    $data = Gudang_Masuk::with('supplier', 'details.barang')->findOrFail($id);
 
-        $this->tanggal = $data->tanggal;
-        $this->notrans = $data->notrans;
-        $this->no_po = $data->no_po;
-        $this->no_faktur = $data->no_faktur;
-        $this->supplier = $data->supplier->nmsupp ?? '';
-        // Detail barang masuk Gudang_Masuk ada relasi details di moddel
-        $this->data = collect($data->details)
-            ->map(function ($item) {
-                return [
-                    'barang' => [
-                        'id' => $item->barang->id ?? null,
-                        'nmbarang' => $item->barang->nmbarang ?? '',
-                    ],
-                    'qty' => $item->qty,
-                    'satuan' => $item->satuan,
-                    'harga' => $item->harga,
-                    'diskon' => $item->diskon,
-                    'ppn' => $item->ppn,
-                ];
-            })
-            ->toArray();
+    $this->tanggal    = $data->tanggal;
+    $this->notrans    = $data->notrans;
+    $this->no_po      = $data->no_po;
+    $this->no_faktur  = $data->no_faktur;
+    $this->supplier   = $data->supplier->nmsupp ?? '';
 
-        // PANGGIL DISPATCH DI AKHIR
-        $this->dispatch('transaksi-loaded', [
-            'notrans' => $this->notrans,
-            'no_po' => $this->no_po,
-            'no_faktur' => $this->no_faktur,
-            'supplier' => $this->supplier,
-            'data' => $this->data,
-        ]);
-        $this->showEditModal = true;
-        // ✅ Ini bagian penting buat trigger JS ambil localStorage berdasarkan notrans
+    $this->data = collect($data->details)->map(function ($item) {
+        return [
+            'barang' => [
+                'id'       => $item->barang->id ?? null,
+                'nmbarang' => $item->barang->nmbarang ?? '',
+            ],
+            'qty'    => $item->qty,
+            'satuan' => $item->satuan,
+            'harga'  => $item->harga,
+            'diskon' => $item->diskon,
+            'ppn'    => $item->ppn,
+        ];
+    })->toArray();
+
+    // ⬇️ Tambahan: isi array harga/diskon/ppn untuk dipakai Livewire
+    $this->harga  = [];
+    $this->diskon = [];
+    $this->ppn    = [];
+    $this->total  = [];
+    $this->grandTotal = '0.00';
+
+    foreach ($this->data as $i => $row) {
+        $this->harga[$i]  = $row['harga'] ?? 0;
+        $this->diskon[$i] = $row['diskon'] ?? 0;
+        $this->ppn[$i]    = $row['ppn'] ?? 0;
+
+        // langsung hitung total awal dari data existing
+        $this->hitungTotal($i);
     }
+
+    $this->dispatch('transaksi-loaded', [
+        'notrans'   => $this->notrans,
+        'no_po'     => $this->no_po,
+        'no_faktur' => $this->no_faktur,
+        'supplier'  => $this->supplier,
+        'data'      => $this->data,
+    ]);
+
+    $this->showEditModal = true;
+}
+
     // modal edit masuk supplier
     public function update()
     {
@@ -238,7 +277,7 @@ class SupplierMasuk extends Component
                 'tgl_input' => $this->tanggal,
                 'user_id' => Auth::user()->id,
                 'grandtotal' => $this->grandTotal ?? '0.00',
-                'status_bayar' => '1',
+                'status_bayar' => '0',
             ]);
 
             Log::info('Purchasing dibuat:', ['id' => $purchasing->id]);
@@ -273,13 +312,19 @@ class SupplierMasuk extends Component
             DB::commit();
             Log::info('Transaksi berhasil disimpan');
 
-            $this->dispatch('swal:success', 'Berhasil menyimpan');
+            // popup sukses
+            $this->dispatch('swal:success', 'Berhasil', 'Transaksi barang masuk berhasil disimpan.');
+
+            // tutup modal pakai animasi yang sudah ada
+            $this->closeModal();
+
+            // kalau mau reset field, boleh setelah closeModal
             $this->reset([
                 'tanggal', 'notrans', 'qty', 'supplier', 'data',
                 'no_faktur', 'no_po', 'supplier_id', 'harga',
                 'diskon', 'ppn', 'total', 'grandTotal'
             ]);
-            $this->dispatch('closeModal');
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Gagal simpan purchasing: ' . $e->getMessage());

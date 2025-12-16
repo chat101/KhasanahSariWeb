@@ -114,7 +114,7 @@
                 'sm:w-24 md:w-32 border border-gray-300' => !$qtyError,
                 'sm:w-24 md:w-32 border-2 border-red-500' => $qtyError,
             ])> --}}
-            <div x-data="{
+            {{-- <div x-data="{
                 rawValue: @entangle('qty').live,
                 displayValue: '',
 
@@ -169,7 +169,78 @@
                     x-on:input.debounce.300ms="displayValue = formatInput(displayValue); updateRawValue()"
                     x-on:blur="displayValue = formatInput(displayValue)" id="qtyInput" placeholder="Qty" type="text"
                     class="px-2 py-1.5 rounded focus:ring focus:ring-blue-300 text-black bg-blue-50 sm:w-24 md:w-32 border border-gray-300" />
-            </div>
+            </div> --}}
+            <div x-data="{
+                rawValue: @entangle('qty').live,
+                displayValue: '',
+
+                formatInput(value) {
+                    // Hanya angka dan koma
+                    value = value.replace(/[^0-9,]/g, '');
+
+                    // Pisahkan bagian desimal
+                    let [intPart, decPart] = value.split(',');
+
+                    // Hapus titik ribuan lama
+                    intPart = intPart.replace(/\./g, '');
+
+                    // Format titik ribuan
+                    let formatted = '';
+                    for (let i = intPart.length - 1, j = 1; i >= 0; i--, j++) {
+                        formatted = intPart[i] + formatted;
+                        if (j % 3 === 0 && i !== 0) {
+                            formatted = '.' + formatted;
+                        }
+                    }
+
+                    if (decPart !== undefined) {
+                        return formatted + ',' + decPart.substring(0, 3); // max 3 desimal
+                    }
+                    return formatted;
+                },
+
+                updateRawValue() {
+                    const cleaned = this.displayValue.replace(/\./g, '').replace(',', '.');
+                    const parsed = parseFloat(cleaned);
+                    // Hindari kirim NaN ke Livewire
+                    if (!isNaN(parsed)) {
+                        this.rawValue = parsed;
+                    } else {
+                        this.rawValue = null;
+                    }
+                },
+
+                init() {
+                    if (this.rawValue) {
+                        let val = this.rawValue.toString().replace('.', ',');
+                        this.displayValue = this.formatInput(val);
+                    }
+                    // Watch rawValue dari Livewire, reset displayValue jika kosong
+                    this.$watch('rawValue', (val) => {
+                        if (!val) this.displayValue = '';
+                    });
+                }
+            }">
+            <input
+                x-model="displayValue"
+                {{-- ENTER: format -> updateRawValue -> panggil addRow --}}
+                x-on:keydown.enter.prevent="
+                    displayValue = formatInput(displayValue);
+                    updateRawValue();
+                    $wire.addRow();
+                "
+                {{-- Ketik biasa: langsung format & update nilai Livewire --}}
+                x-on:input="
+                    displayValue = formatInput(displayValue);
+                    updateRawValue();
+                "
+                x-on:blur="displayValue = formatInput(displayValue)"
+                id="qtyInput"
+                placeholder="Qty"
+                type="text"
+                class="px-2 py-1.5 rounded focus:ring focus:ring-blue-300 text-black bg-blue-50 sm:w-24 md:w-32 border border-gray-300"
+            />
+        </div>
 
             <!-- Kolom Satuan -->
             <select wire:model.defer="satuan"
@@ -352,5 +423,16 @@
                 });
             }, 100);
         });
+document.addEventListener('livewire:init', () => {
+    Livewire.on('focus-nama-barang', () => {
+        // cari input yang punya x-ref="namabarang"
+        const el = document.querySelector('input[x-ref="namabarang"]');
+        if (el) {
+            el.focus();
+            el.select(); // langsung select teksnya
+        }
+    });
+});
+
     </script>
 @endpush

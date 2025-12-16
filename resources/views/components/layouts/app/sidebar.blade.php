@@ -35,7 +35,20 @@
                             {{ __('Master Toko') }}
                         </flux:navlist.item>
                     @endmenuitem
-
+                    @menuitem('masterdata', 'master.wilayah')
+                    <flux:navlist.item icon="home" :href="route('master.wilayah')"
+                        :current="request()->routeIs('master.wilayah')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Master Wilayah') }}
+                    </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('masterdata', 'master.area')
+                    <flux:navlist.item icon="home" :href="route('master.area')"
+                        :current="request()->routeIs('master.area')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Master Area') }}
+                    </flux:navlist.item>
+                    @endmenuitem
                     @menuitem('masterdata', 'msupplier')
                         <flux:navlist.item icon="home" :href="route('msupplier')" :current="request()->routeIs('msupplier')"
                             wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
@@ -70,6 +83,20 @@
                             {{ __('Setting Produk Ke Mesin') }}
                         </flux:navlist.item>
                     @endmenuitem
+                    @menuitem('masterdata', 'master-target-kontribusi')
+                    <flux:navlist.item icon="home" :href="route('master-target-kontribusi')"
+                        :current="request()->routeIs('master-target-kontribusi')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Target Kontribusi') }}
+                    </flux:navlist.item>
+                @endmenuitem
+                @menuitem('masterdata', 'upload-proyeksi')
+                <flux:navlist.item icon="home" :href="route('upload-proyeksi')"
+                    :current="request()->routeIs('master-target-kontribusi')" wire:navigate
+                    class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                    {{ __('UPLOAD PROYEKSI') }}
+                </flux:navlist.item>
+            @endmenuitem
                 </flux:navlist.group>
             @endmenugroup
             {{-- Grup Gudang --}}
@@ -88,6 +115,17 @@
                     </flux:navlist.item>
                 </flux:navlist.group>
             @endmenugroup
+            @menugroup('Operasional')
+            <flux:navlist.group expandable
+                :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="OPERASIONAL"
+                class="grid">
+                <flux:navlist.item icon="home" :href="route('sisa-sales')" :current="request()->routeIs('sisa-sales')"
+                    wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                    {{ __('REPORT SISA SALES') }}
+                </flux:navlist.item>
+
+            </flux:navlist.group>
+        @endmenugroup
             @menugroup('Purchasing')
                 {{-- Grup Purchasing --}}
                 <flux:navlist.group expandable
@@ -103,11 +141,11 @@
                         class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                         {{ __('Rekap Input Masuk') }}
                     </flux:navlist.item>
-                    <flux:navlist.item icon="home" :href="route('hutangsupp')"
+                    {{-- <flux:navlist.item icon="home" :href="route('hutangsupp')"
                         :current="request()->routeIs('hutangsupp')" wire:navigate
                         class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                         {{ __('Hutang Supplier') }}
-                    </flux:navlist.item>
+                    </flux:navlist.item> --}}
                 </flux:navlist.group>
             @endmenugroup
 
@@ -215,11 +253,11 @@
                             {{ __('Piutang Supplier') }}
                         </flux:navlist.item>
                     @endmenuitem
-                    @menuitem('FINANCE', 'bayarpiutang')
-                        <flux:navlist.item icon="home" :href="route('bayarpiutang')"
-                            :current="request()->routeIs('bayarpiutang')" wire:navigate
+                    @menuitem('FINANCE', 'hutang.dagang.index')
+                        <flux:navlist.item icon="home" :href="route('hutang.dagang.index')"
+                            :current="request()->routeIs('hutang.dagang.index')" wire:navigate
                             class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                            {{ __('Bayar Piutang') }}
+                            {{ __('HUTANG DAGANG') }}
                         </flux:navlist.item>
                     @endmenuitem
 

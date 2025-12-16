@@ -14,7 +14,9 @@ class PurchasingPayment extends Model
         'tanggal_bayar',
         'jumlah_bayar',
         'metode_bayar',
+        'no_bukti',
         'keterangan',
+        'user_id',
     ];
 
     public function purchasing()
