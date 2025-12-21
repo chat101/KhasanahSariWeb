@@ -116,6 +116,10 @@ class User extends Authenticatable
                 'groups' => ['masterdata',  'operasional','accounting', 'laporan'],
                 'items'  => [], // kosong = semua item pada grup yang diizinkan
             ],
+            'wilayah' => [
+                'groups' => ['masterdata',  'operasional','accounting', 'laporan'],
+                'items'  => [], // kosong = semua item pada grup yang diizinkan
+            ],
         ];
     }
     /**

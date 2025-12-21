@@ -36,22 +36,23 @@
                         </flux:navlist.item>
                     @endmenuitem
                     @menuitem('masterdata', 'master.wilayah')
-                    <flux:navlist.item icon="home" :href="route('master.wilayah')"
-                        :current="request()->routeIs('master.wilayah')" wire:navigate
-                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                        {{ __('Master Wilayah') }}
-                    </flux:navlist.item>
+                        <flux:navlist.item icon="home" :href="route('master.wilayah')"
+                            :current="request()->routeIs('master.wilayah')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master Wilayah') }}
+                        </flux:navlist.item>
                     @endmenuitem
                     @menuitem('masterdata', 'master.area')
-                    <flux:navlist.item icon="home" :href="route('master.area')"
-                        :current="request()->routeIs('master.area')" wire:navigate
-                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                        {{ __('Master Area') }}
-                    </flux:navlist.item>
+                        <flux:navlist.item icon="home" :href="route('master.area')"
+                            :current="request()->routeIs('master.area')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Master Area') }}
+                        </flux:navlist.item>
                     @endmenuitem
                     @menuitem('masterdata', 'msupplier')
-                        <flux:navlist.item icon="home" :href="route('msupplier')" :current="request()->routeIs('msupplier')"
-                            wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        <flux:navlist.item icon="home" :href="route('msupplier')"
+                            :current="request()->routeIs('msupplier')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                             {{ __('Master Supplier') }}
                         </flux:navlist.item>
                     @endmenuitem
@@ -84,19 +85,26 @@
                         </flux:navlist.item>
                     @endmenuitem
                     @menuitem('masterdata', 'master-target-kontribusi')
-                    <flux:navlist.item icon="home" :href="route('master-target-kontribusi')"
-                        :current="request()->routeIs('master-target-kontribusi')" wire:navigate
+                        <flux:navlist.item icon="home" :href="route('master-target-kontribusi')"
+                            :current="request()->routeIs('master-target-kontribusi')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('Target Kontribusi') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('masterdata', 'upload-proyeksi')
+                        <flux:navlist.item icon="home" :href="route('upload-proyeksi')"
+                            :current="request()->routeIs('master-target-kontribusi')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('UPLOAD PROYEKSI') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('masterdata', 'master.trend-inflasi')
+                    <flux:navlist.item icon="home" :href="route('master.trend-inflasi')"
+                        :current="request()->routeIs('master.trend-inflasi')" wire:navigate
                         class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                        {{ __('Target Kontribusi') }}
+                        {{ __('Master Trend Inflasi') }}
                     </flux:navlist.item>
-                @endmenuitem
-                @menuitem('masterdata', 'upload-proyeksi')
-                <flux:navlist.item icon="home" :href="route('upload-proyeksi')"
-                    :current="request()->routeIs('master-target-kontribusi')" wire:navigate
-                    class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                    {{ __('UPLOAD PROYEKSI') }}
-                </flux:navlist.item>
-            @endmenuitem
+                    @endmenuitem
                 </flux:navlist.group>
             @endmenugroup
             {{-- Grup Gudang --}}
@@ -116,16 +124,21 @@
                 </flux:navlist.group>
             @endmenugroup
             @menugroup('Operasional')
-            <flux:navlist.group expandable
-                :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="OPERASIONAL"
-                class="grid">
-                <flux:navlist.item icon="home" :href="route('sisa-sales')" :current="request()->routeIs('sisa-sales')"
-                    wire:navigate class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                    {{ __('REPORT SISA SALES') }}
+                <flux:navlist.group expandable
+                    :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="OPERASIONAL"
+                    class="grid">
+                    <flux:navlist.item icon="home" :href="route('loss-bahan')"
+                    :current="request()->routeIs('loss-bahan')" wire:navigate
+                    class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                    {{ __('Input Loss Bahan') }}
                 </flux:navlist.item>
-
-            </flux:navlist.group>
-        @endmenugroup
+                    <flux:navlist.item icon="home" :href="route('sisa-sales')"
+                        :current="request()->routeIs('sisa-sales')" wire:navigate
+                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                        {{ __('Laporan Kontribusi') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @endmenugroup
             @menugroup('Purchasing')
                 {{-- Grup Purchasing --}}
                 <flux:navlist.group expandable
@@ -169,33 +182,33 @@
                         </flux:navlist.item>
                     @endmenuitem
                     @menuitem('ACCOUNTING', 'keuangan.master-akun-biaya')
-                    <flux:navlist.item icon="home" :href="route('keuangan.master-akun-biaya')"
-                        :current="request()->routeIs('keuangan.master-akun-biaya')" wire:navigate
-                        class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                        {{ __('MASTER AKUN BIAYA') }}
-                    </flux:navlist.item>
-                      @endmenuitem
-                      @menuitem('ACCOUNTING', 'keuangan.master-kas')
-                      <flux:navlist.item icon="home" :href="route('keuangan.master-kas')"
-                          :current="request()->routeIs('keuangan.master-kas')" wire:navigate
-                          class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                          {{ __('MASTER KAS') }}
-                      </flux:navlist.item>
-                        @endmenuitem
-                        @menuitem('ACCOUNTING', 'keuangan.master-template-jurnal')
+                        <flux:navlist.item icon="home" :href="route('keuangan.master-akun-biaya')"
+                            :current="request()->routeIs('keuangan.master-akun-biaya')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('MASTER AKUN BIAYA') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('ACCOUNTING', 'keuangan.master-kas')
+                        <flux:navlist.item icon="home" :href="route('keuangan.master-kas')"
+                            :current="request()->routeIs('keuangan.master-kas')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('MASTER KAS') }}
+                        </flux:navlist.item>
+                    @endmenuitem
+                    @menuitem('ACCOUNTING', 'keuangan.master-template-jurnal')
                         <flux:navlist.item icon="home" :href="route('keuangan.master-template-jurnal')"
                             :current="request()->routeIs('keuangan.master-template-jurnal')" wire:navigate
                             class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                             {{ __('MASTER TEMPLATE JURNAL') }}
                         </flux:navlist.item>
-                          @endmenuitem
-                          @menuitem('ACCOUNTING', 'keuangan.master-role-coa')
-                          <flux:navlist.item icon="home" :href="route('keuangan.master-role-coa')"
-                              :current="request()->routeIs('keuangan.master-role-coa')" wire:navigate
-                              class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
-                              {{ __('MASTER ROLE COA') }}
-                          </flux:navlist.item>
-                            @endmenuitem
+                    @endmenuitem
+                    @menuitem('ACCOUNTING', 'keuangan.master-role-coa')
+                        <flux:navlist.item icon="home" :href="route('keuangan.master-role-coa')"
+                            :current="request()->routeIs('keuangan.master-role-coa')" wire:navigate
+                            class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                            {{ __('MASTER ROLE COA') }}
+                        </flux:navlist.item>
+                    @endmenuitem
                     @menuitem('ACCOUNTING', 'transaksi.index')
                         <flux:navlist.item icon="home" :href="route('transaksi.index')"
                             :current="request()->routeIs('transaksi.index')" wire:navigate

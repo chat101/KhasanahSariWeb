@@ -2,6 +2,7 @@
 
 
 use App\Livewire\Dashboard;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Livewire\Master\Toko;
@@ -78,6 +79,9 @@ use App\Livewire\Accounting\Transaction\Index as TxIndex;
 use App\Livewire\Accounting\Transaction\Create as TxCreate;
 use App\Livewire\Master\UploadProyeksi;
 use App\Livewire\Operasional\Area as OperasionalArea;
+use App\Livewire\Operasional\InputLossBahan;
+use App\Livewire\Operasional\LaporanKontribusi;
+use App\Livewire\Operasional\MasterTrendInflasi\Index;
 use App\Livewire\Operasional\Sisasales;
 use App\Livewire\Operasional\TargetKontribusi;
 use App\Livewire\Operasional\Wilayah as OperasionalWilayah;
@@ -94,9 +98,9 @@ Route::get('/', function () {
 //     ->middleware(['auth', 'verified'])
 //     ->name('dashboard');
 
-Route::get('dashboard', Dashboard::class)
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+// Route::get('dashboard', Dashboard::class)
+//     ->middleware(['auth', 'verified'])
+//     ->name('dashboard');
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
@@ -155,9 +159,13 @@ Route::middleware(['auth'])->group(function () {
 
        // Route Operasional
        Route::middleware(['auth'])->group(function () {
-        Route::get('/sisa-sales', Sisasales::class)->name('sisa-sales');
+        // Route::get('/sisa-sales', Sisasales::class)->name('sisa-sales');
+        Route::get('/sisa-sales', LaporanKontribusi::class)->name('sisa-sales');
+
         Route::get('master-target-kontribusi', TargetKontribusi::class)->name('master-target-kontribusi');
         Route::get('upload-proyeksi', UploadProyeksi::class)->name('upload-proyeksi');
+        Route::get('/master-trend-inflasi', Index::class)->name('master.trend-inflasi');
+        Route::get('/loss-bahan', InputLossBahan::class)->name('loss-bahan');
     });
 
 
@@ -218,6 +226,20 @@ Route::middleware('auth')->group(function () {
         $r->user()->deletePushSubscription($r->endpoint);
         return response()->noContent();
     });
+
+});
+
+
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return view('welcome');
+})->name('home');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
 });
 
 require __DIR__ . '/auth.php';

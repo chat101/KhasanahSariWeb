@@ -67,7 +67,7 @@ class Toko extends Component
             ->latest();
 
         return view('livewire.master.toko', [
-            'produks'  => $query->paginate(10),
+            'produks'  => $query->paginate(15),
             'wilayahs' => Wilayah::orderBy('nama_wilayah')->get(),
         ]);
     }

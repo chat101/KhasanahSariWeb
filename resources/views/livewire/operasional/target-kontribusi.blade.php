@@ -48,6 +48,7 @@
                         <th class="px-3 py-2 text-center">Tipe</th>
                         <th class="px-3 py-2 text-right">Nilai</th>
                         <th class="px-3 py-2 text-center">Aktif</th>
+                        <th class="px-3 py-2 text-center">Produksi</th>
                         <th class="px-3 py-2 text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -65,10 +66,17 @@
                             </td>
 
                             <td class="px-3 py-2 text-right font-semibold">
-                                @if($r->tipe === 'PERSEN')
-                                    {{ number_format($r->nilai, 2, ',', '.') }}%
+                                @if($r->pakai_rule_produksi)
+                                    <div class="text-[11px] leading-4">
+                                        <div>PS: {{ $r->tipe==='PERSEN' ? number_format($r->nilai_produksi_sendiri,2,',','.') . '%' : number_format($r->nilai_produksi_sendiri,0,',','.') }}</div>
+                                        <div>NonPS: {{ $r->tipe==='PERSEN' ? number_format($r->nilai_non_produksi_sendiri,2,',','.') . '%' : number_format($r->nilai_non_produksi_sendiri,0,',','.') }}</div>
+                                    </div>
                                 @else
-                                    {{ number_format($r->nilai, 0, ',', '.') }}
+                                    @if($r->tipe === 'PERSEN')
+                                        {{ number_format($r->nilai, 2, ',', '.') }}%
+                                    @else
+                                        {{ number_format($r->nilai, 0, ',', '.') }}
+                                    @endif
                                 @endif
                             </td>
 
@@ -149,17 +157,49 @@
                         </label>
 
                         <input type="number" step="0.01" wire:model="nilai"
-                               class="w-full border rounded-lg px-2 py-1 text-right"
-                               placeholder="{{ $tipe === 'PERSEN' ? '1.00' : '250000' }}">
+                            @disabled($pakai_rule_produksi)
+                            class="w-full border rounded-lg px-2 py-1 text-right disabled:bg-gray-100"
+                            placeholder="{{ $tipe === 'PERSEN' ? '1.00' : '250000' }}">
 
-                        @error('nilai') <div class="text-red-600 text-[11px] mt-1">{{ $message }}</div> @enderror
+                            @error('nilai') <div class="text-red-600 text-[11px] mt-1">{{ $message }}</div> @enderror
 
-                        @if($tipe === 'PERSEN')
-                            <div class="text-[11px] text-gray-500 mt-1">Contoh: 1.00 berarti 1%</div>
-                        @else
-                            <div class="text-[11px] text-gray-500 mt-1">Contoh: 250000 berarti Rp 250.000</div>
-                        @endif
+                            @if($tipe === 'PERSEN')
+                                <div class="text-[11px] text-gray-500 mt-1">Contoh: 1.00 berarti 1%</div>
+                            @else
+                                <div class="text-[11px] text-gray-500 mt-1">Contoh: 250000 berarti Rp 250.000</div>
+                            @endif
                     </div>
+                    <div class="md:col-span-2">
+                        <label class="inline-flex items-center gap-2 text-xs">
+                            <input type="checkbox" wire:model.live="pakai_rule_produksi" class="rounded">
+                            <span>Pisahkan target untuk toko Produksi Sendiri / Tidak</span>
+                        </label>
+                        <div class="text-[11px] text-gray-500 mt-1">
+                            Jika aktif, nilai target akan mengikuti kolom <b>tokos.produksi_sendiri</b>.
+                        </div>
+                    </div>
+
+                    @if($pakai_rule_produksi)
+                        <div>
+                            <label class="block text-gray-500 mb-1">
+                                Nilai (Produksi Sendiri) {{ $tipe === 'PERSEN' ? '(%)' : '(Rp)' }}
+                            </label>
+                            <input type="number" step="0.01" wire:model="nilai_produksi_sendiri"
+                                   class="w-full border rounded-lg px-2 py-1 text-right"
+                                   placeholder="{{ $tipe === 'PERSEN' ? '1.00' : '250000' }}">
+                            @error('nilai_produksi_sendiri') <div class="text-red-600 text-[11px] mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-500 mb-1">
+                                Nilai (Tidak Produksi Sendiri) {{ $tipe === 'PERSEN' ? '(%)' : '(Rp)' }}
+                            </label>
+                            <input type="number" step="0.01" wire:model="nilai_non_produksi_sendiri"
+                                   class="w-full border rounded-lg px-2 py-1 text-right"
+                                   placeholder="{{ $tipe === 'PERSEN' ? '1.00' : '250000' }}">
+                            @error('nilai_non_produksi_sendiri') <div class="text-red-600 text-[11px] mt-1">{{ $message }}</div> @enderror
+                        </div>
+                    @endif
 
                     <div class="md:col-span-2">
                         <label class="inline-flex items-center gap-2 text-xs">

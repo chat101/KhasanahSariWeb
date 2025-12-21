@@ -19,6 +19,9 @@ class TargetKontribusi extends Component
     public $tipe = 'PERSEN';
     public $nilai = 0;
     public $aktif = true;
+    public $pakai_rule_produksi = false;
+    public $nilai_produksi_sendiri;
+    public $nilai_non_produksi_sendiri;
 
     protected function rules()
     {
@@ -47,7 +50,9 @@ class TargetKontribusi extends Component
         $this->tipe   = $row->tipe;
         $this->nilai  = (float) $row->nilai;
         $this->aktif  = (bool) $row->aktif;
-
+        $this->pakai_rule_produksi = (bool) $row->pakai_rule_produksi;
+        $this->nilai_produksi_sendiri = $row->nilai_produksi_sendiri;
+        $this->nilai_non_produksi_sendiri = $row->nilai_non_produksi_sendiri;
         $this->resetValidation();
         $this->showModal = true;
     }
@@ -65,12 +70,34 @@ class TargetKontribusi extends Component
         $this->tipe = 'PERSEN';
         $this->nilai = 0;
         $this->aktif = true;
+        $this->pakai_rule_produksi = false;
+        $this->nilai_produksi_sendiri = null;
+        $this->nilai_non_produksi_sendiri = null;
         $this->resetValidation();
     }
 
     public function save()
     {
-        $this->validate();
+        $rules = [
+            'kode' => 'required',
+            'nama' => 'required',
+            'tipe' => 'required|in:PERSEN,RUPIAH',
+            'nilai' => 'nullable|numeric',
+            'aktif' => 'boolean',
+            'pakai_rule_produksi' => 'boolean',
+            'nilai_produksi_sendiri' => 'nullable|numeric',
+            'nilai_non_produksi_sendiri' => 'nullable|numeric',
+          ];
+
+          // kalau pakai rule produksi → wajib isi 2 nilai, dan "nilai" global boleh null
+          if ($this->pakai_rule_produksi) {
+            $rules['nilai_produksi_sendiri'] = 'required|numeric';
+            $rules['nilai_non_produksi_sendiri'] = 'required|numeric';
+          } else {
+            $rules['nilai'] = 'required|numeric';
+          }
+
+          $this->validate($rules);
 
         // validasi tambahan tergantung tipe
         if ($this->tipe === 'PERSEN' && $this->nilai > 100) {
@@ -86,6 +113,14 @@ class TargetKontribusi extends Component
                 'tipe'  => $this->tipe,
                 'nilai' => $this->nilai,
                 'aktif' => $this->aktif ? 1 : 0,
+
+                'pakai_rule_produksi' => $this->pakai_rule_produksi ? 1 : 0,
+
+                // kalau pakai rule produksi: simpan 2 nilai, kosongkan nilai global
+                'nilai' => $this->pakai_rule_produksi ? null : $this->nilai,
+
+                'nilai_produksi_sendiri' => $this->pakai_rule_produksi ? $this->nilai_produksi_sendiri : null,
+                'nilai_non_produksi_sendiri' => $this->pakai_rule_produksi ? $this->nilai_non_produksi_sendiri : null,
             ]
         );
 
