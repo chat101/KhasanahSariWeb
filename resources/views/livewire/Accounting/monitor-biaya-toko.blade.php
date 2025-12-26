@@ -17,7 +17,7 @@
                         <span>Monitoring Biaya per Toko</span>
                     </h2>
                     <p class="text-[11px] text-gray-500 dark:text-zinc-400 mt-0.5">
-                        Periode {{ $startDate }} s/d {{ $endDate }}.
+                        Periode {{ $syncedStartDate ?? $startDate }} s/d {{ $syncedEndDate ?? $endDate }}.
                     </p>
                 </div>
 
@@ -55,24 +55,22 @@
 
                     {{-- Tombol --}}
                     <div class="flex gap-1">
-                        <button wire:click="syncRealisasiFromApi"
-                        wire:loading.attr="disabled"
-                        wire:target="syncRealisasiFromApi"
-                        class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md
+                        <button wire:click="syncRealisasiFromApi" wire:loading.attr="disabled"
+                            wire:target="syncRealisasiFromApi"
+                            class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md
                                text-[11px] font-semibold shadow-sm flex items-center gap-1">
 
-                    <span wire:loading.remove wire:target="syncRealisasiFromApi">
-                        Sync API
-                    </span>
+                            <span wire:loading.remove wire:target="syncRealisasiFromApi">
+                                Sync API
+                            </span>
 
-                    <svg wire:loading wire:target="syncRealisasiFromApi"
-                         class="animate-spin h-3 w-3 text-white" fill="none"
-                         viewBox="0 0 24 24">
-                        <circle class="opacity-30" cx="12" cy="12" r="10"
-                                stroke="currentColor" stroke-width="4" />
-                        <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
-                </button>
+                            <svg wire:loading wire:target="syncRealisasiFromApi" class="animate-spin h-3 w-3 text-white"
+                                fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4" />
+                                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                            </svg>
+                        </button>
 
                         <button wire:click="openBudgetModal"
                             class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md
@@ -137,203 +135,256 @@
                     </div>
                 </div>
 
-
-                {{-- Tabel (compact) --}}
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-[11px]">
-                        <thead class="bg-indigo-600 text-white sticky top-0 z-10">
-                            <tr>
-                                <th class="px-2 py-1 text-left w-8">No</th>
-                                <th class="px-2 py-1 text-left w-16">ID Akun</th>
-                                <th class="px-2 py-1 text-left">Tipe</th>
-                                <th class="px-2 py-1 text-left">Deskripsi</th>
-                                <th class="px-2 py-1 text-right w-24">Budget</th>
-                                <th class="px-2 py-1 text-right w-24">Realisasi</th>
-                                <th class="px-2 py-1 text-right w-24">Sisa</th>
-                                <th class="px-2 py-1 text-center w-32">Progress</th>
-                            </tr>
-                        </thead>
-                        <tbody
-                            class="divide-y divide-gray-200 dark:divide-zinc-700
+                @if (!$hasSynced)
+                    <div class="p-6 text-center text-sm text-gray-500">
+                        Silakan pilih toko & periode, lalu klik <span class="font-semibold">Sync API</span> untuk
+                        menampilkan data.
+                    </div>
+                @else
+                    {{-- Tabel (compact) --}}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-[11px]">
+                            <thead class="bg-indigo-600 text-white sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-2 py-1 text-left w-8">No</th>
+                                    <th class="px-2 py-1 text-left w-16">ID Akun</th>
+                                    <th class="px-2 py-1 text-left">Tipe</th>
+                                    <th class="px-2 py-1 text-left">Deskripsi</th>
+                                    <th class="px-2 py-1 text-right w-24">Budget</th>
+                                    <th class="px-2 py-1 text-right w-24">Realisasi</th>
+                                    <th class="px-2 py-1 text-right w-24">Sisa</th>
+                                    <th class="px-2 py-1 text-center w-32">Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody
+                                class="divide-y divide-gray-200 dark:divide-zinc-700
                                    text-gray-700 dark:text-zinc-200">
 
-                            @forelse ($items as $idx => $row)
-                                @php
-                                    $sisa = $row->budget - $row->realisasi;
-                                    $persen = $row->budget > 0 ? ($row->realisasi / $row->budget) * 100 : 0;
-                                @endphp
-                                <tr class="odd:bg-white even:bg-gray-50 dark:odd:bg-zinc-800 dark:even:bg-zinc-900">
-                                    <td class="px-2 py-1 align-middle">{{ $idx + 1 }}</td>
-                                    <td class="px-2 py-1 align-middle whitespace-nowrap">{{ $row->idakun_api }}</td>
-                                    <td class="px-2 py-1 align-middle truncate max-w-[140px]">
-                                        {{ $row->tipe_api ?? '-' }}
-                                    </td>
-                                    <td class="px-2 py-1 align-middle truncate max-w-[180px]">
-                                        {{ $row->ket_api ?? '-' }}
-                                    </td>
-                                    <td class="px-2 py-1 align-middle text-right">
-                                        {{ number_format($row->budget, 0, ',', '.') }}
-                                    </td>
-                                    <td class="px-2 py-1 align-middle text-right">
-                                        {{ number_format($row->realisasi, 0, ',', '.') }}
-                                    </td>
-                                    <td class="px-2 py-1 align-middle text-right">
-                                        {{ number_format($sisa, 0, ',', '.') }}
-                                    </td>
-                                    <td class="px-2 py-1 align-middle">
-                                        <div class="flex flex-col gap-0.5">
-                                            <div
-                                                class="w-full h-1 rounded-full bg-gray-200 dark:bg-zinc-700 overflow-hidden">
-                                                <div class="h-1 rounded-full
+                                @forelse ($items as $idx => $row)
+                                    @php
+                                        $sisa = $row->budget - $row->realisasi;
+                                        $persen = $row->budget > 0 ? ($row->realisasi / $row->budget) * 100 : 0;
+                                    @endphp
+                                    <tr class="odd:bg-white even:bg-gray-50 dark:odd:bg-zinc-800 dark:even:bg-zinc-900">
+                                        <td class="px-2 py-1 align-middle">{{ $idx + 1 }}</td>
+                                        <td class="px-2 py-1 align-middle whitespace-nowrap">{{ $row->idakun_api }}</td>
+                                        <td class="px-2 py-1 align-middle truncate max-w-[140px]">
+                                            {{ $row->tipe_api ?? '-' }}
+                                        </td>
+                                        <td class="px-2 py-1">
+                                            <div class="truncate max-w-[220px]" title="{{ $row->deskripsi }}">
+                                                {{ $row->deskripsi }}
+                                            </div>
+                                        </td>
+                                        <td class="px-2 py-1 align-middle text-right">
+                                            {{ number_format($row->budget, 0, ',', '.') }}
+                                        </td>
+                                        <td class="px-2 py-1 align-middle text-right">
+                                            {{ number_format($row->realisasi, 0, ',', '.') }}
+                                        </td>
+                                        <td class="px-2 py-1 align-middle text-right">
+                                            {{ number_format($sisa, 0, ',', '.') }}
+                                        </td>
+                                        <td class="px-2 py-1 align-middle">
+                                            <div class="flex flex-col gap-0.5">
+                                                <div
+                                                    class="w-full h-1 rounded-full bg-gray-200 dark:bg-zinc-700 overflow-hidden">
+                                                    <div class="h-1 rounded-full
                                                 @if ($persen < 70) bg-emerald-500
                                                 @elseif($persen < 100) bg-amber-500
                                                 @else bg-red-500 @endif"
-                                                    style="width: {{ min($persen, 100) }}%"></div>
-                                            </div>
-                                            <div class="text-[9px] text-center text-gray-500 dark:text-zinc-400">
-                                                {{ number_format($persen, 1, ',', '.') }}%
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7"
-                                        class="px-3 py-4 text-center text-gray-500 dark:text-zinc-400 text-[11px]">
-                                        Belum ada data budget / realisasi untuk filter yang dipilih.
-                                    </td>
-                                </tr>
-                            @endforelse
-
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        @if ($showBudgetModal)
-            <div class="fixed inset-0 z-50 flex items-center justify-center">
-                {{-- overlay --}}
-                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-
-                {{-- dialog --}}
-                <div
-                    class="relative bg-white dark:bg-zinc-800 w-full max-w-xl
-                    rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 p-4">
-
-                    <div
-                        class="flex items-center justify-between mb-3 border-b border-gray-200 dark:border-zinc-700 pb-2">
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-800 dark:text-zinc-100">
-                                Atur Budget Bulanan
-                            </h3>
-                            <p class="text-xs text-gray-500 dark:text-zinc-400">
-                                Toko: {{ optional($listToko->firstWhere('id', $this->tokoId))->nmtoko }}<br>
-                                Periode: {{ \Carbon\Carbon::parse($startDate)->translatedFormat('F Y') }}
-                            </p>
-                        </div>
-                        <button wire:click="$set('showBudgetModal', false)"
-                            class="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-zinc-700">
-                            <svg class="w-4 h-4 text-gray-500 dark:text-zinc-300" viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div class="max-h-80 overflow-y-auto border border-gray-100 dark:border-zinc-700 rounded-md">
-                        <table class="min-w-full text-xs">
-                            <thead class="bg-gray-50 dark:bg-zinc-900">
-                                <tr>
-                                    <th class="px-2 py-1 text-left">Akun</th>
-                                    <th class="px-2 py-1 text-left ">Keterangan</th>
-                                    <th class="px-2 py-1 text-right">Budget / Bulan</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-zinc-700">
-
-                                {{-- TAMBAHKAN BAGIAN INI --}}
-                                @php
-                                    $haris = [
-                                        'senin' => 'Sen',
-                                        'selasa' => 'Sel',
-                                        'rabu' => 'Rab',
-                                        'kamis' => 'Kam',
-                                        'jumat' => 'Jum',
-                                        'sabtu' => 'Sab',
-                                        'minggu' => 'Min',
-                                    ];
-                                @endphp
-
-                                @foreach ($items as $row)
-                                    <tr class="bg-white dark:bg-zinc-800">
-                                        <td class="px-2 py-1 whitespace-nowrap">
-                                            {{ $row->idakun_api }}
-                                        </td>
-                                        <td class="px-2 py-1">
-                                            {{ $row->tipe_api ?? ($row->ket_api ?? '-') }}
-                                        </td>
-
-                                        <td class="px-2 py-1 text-right">
-
-                                            {{-- Input default (rupiah/persen) --}}
-                                            <div class="flex items-center justify-end gap-1.5 mb-1">
-                                                <select wire:model="budgetTypes.{{ $row->idakun_api }}"
-                                                    class="text-[10px] border border-gray-300 dark:border-zinc-600 rounded px-1 py-0.5">
-                                                    <option class="text-black" value="rupiah">Rp / hari</option>
-                                                    <option class="text-black" value="persen">% dari penjualan</option>
-                                                </select>
-
-                                                <input type="text" x-data="moneyFormat()"
-                                                    x-on:input="formatInput($event)"
-                                                    class="w-24 text-right border border-gray-300 dark:border-zinc-600 rounded px-2 py-1 text-xs"
-                                                    wire:model.live="budgetInputs.{{ $row->idakun_api }}"
-                                                    placeholder="0">
-                                            </div>
-
-                                            {{-- Input per hari --}}
-                                            <div class="grid grid-cols-2 gap-0.5 text-[9px]">
-                                                @foreach ($haris as $keyHari => $labelHari)
-                                                    <div class="flex items-center justify-between gap-1">
-                                                        <span>{{ $labelHari }}</span>
-                                                        <input type="text" x-data="moneyFormat()"
-                                                            x-on:input="formatInput($event)"
-                                                            class="w-20 text-right border border-gray-200 dark:border-zinc-700 rounded px-1 py-0.5 text-[9px]"
-                                                            wire:model.live="dailyBudgets.{{ $row->idakun_api }}.{{ $keyHari }}"
-                                                            placeholder="0">
-                                                    </div>
-                                                @endforeach
-                                            </div>
-
-                                            {{-- Fallback indicator --}}
-                                            @if (!empty($fallbackInfo[$row->idakun_api]))
-                                                <div class="text-[10px] text-amber-600 mt-1 italic">
-                                                    {{ $fallbackInfo[$row->idakun_api] }}
+                                                        style="width: {{ min($persen, 100) }}%"></div>
                                                 </div>
-                                            @endif
+                                                <div class="text-[9px] text-center text-gray-500 dark:text-zinc-400">
+                                                    {{ number_format($persen, 1, ',', '.') }}%
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="7"
+                                            class="px-3 py-4 text-center text-gray-500 dark:text-zinc-400 text-[11px]">
+                                            Belum ada data budget / realisasi untuk filter yang dipilih.
+                                        </td>
+                                    </tr>
+                                @endforelse
 
                             </tbody>
                         </table>
                     </div>
+                @endif
+            </div>
+        </div>
 
+        @if ($showBudgetModal)
+            <div class="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-6">
+                {{-- OVERLAY --}}
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
 
-                    <div class="flex justify-end gap-2 mt-3">
-                        <button type="button" wire:click="$set('showBudgetModal', false)"
-                            class="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-xs">
-                            Batal
-                        </button>
-                        <button type="button" wire:click="saveBudgets"
-                            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs">
-                            Simpan Budget
-                        </button>
+                {{-- DIALOG --}}
+                <div
+                    class="relative bg-white dark:bg-zinc-800
+               w-[95vw] md:w-[92vw] lg:w-[88vw] xl:w-[80vw] 2xl:w-[70vw]
+               max-w-7xl
+               rounded-xl shadow-lg border border-gray-200 dark:border-zinc-700">
+
+                    {{-- CONTAINER --}}
+                    <div class="max-h-[90vh] flex flex-col">
+
+                        {{-- ================= HEADER ================= --}}
+                        <div
+                            class="flex items-center justify-between px-4 py-3
+                       border-b border-gray-200 dark:border-zinc-700">
+
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-800 dark:text-zinc-100">
+                                    Atur Budget Bulanan
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
+                                    Toko: {{ optional($listToko->firstWhere('id', $this->tokoId))->nmtoko }} <br>
+                                    Periode: {{ \Carbon\Carbon::parse($startDate)->translatedFormat('F Y') }}
+                                </p>
+                            </div>
+
+                            <button wire:click="$set('showBudgetModal', false)"
+                                class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-700">
+                                <svg class="w-4 h-4 text-gray-500 dark:text-zinc-300" viewBox="0 0 24 24"
+                                    fill="none">
+                                    <path d="M6 18L18 6M6 6L18 18" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {{-- ================= BODY ================= --}}
+                        <div class="flex-1 overflow-hidden px-4 py-3">
+
+                            <div class="border border-gray-100 dark:border-zinc-700 rounded-lg overflow-hidden">
+                                <div class="max-h-[65vh] overflow-y-auto overflow-x-auto">
+
+                                    <table class="min-w-[1200px] w-full text-xs">
+                                        <thead class="bg-gray-50 dark:bg-zinc-900 sticky top-0 z-10">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left w-24">ID Akun</th>
+                                                <th class="px-3 py-2 text-left w-40">Tipe</th>
+                                                <th class="px-3 py-2 text-left w-[280px]">Deskripsi</th>
+                                                <th class="px-3 py-2 text-right w-[420px]">Budget</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody class="divide-y divide-gray-100 dark:divide-zinc-700">
+
+                                            @php
+                                                $haris = [
+                                                    'senin' => 'Sen',
+                                                    'selasa' => 'Sel',
+                                                    'rabu' => 'Rab',
+                                                    'kamis' => 'Kam',
+                                                    'jumat' => 'Jum',
+                                                    'sabtu' => 'Sab',
+                                                    'minggu' => 'Min',
+                                                ];
+                                            @endphp
+
+                                            @foreach ($items as $row)
+                                                @php
+                                                    $deskripsi = $row->deskripsi ?? '-';
+                                                    $key = $row->idakun_api . '||' . $deskripsi;
+                                                @endphp
+
+                                                <tr class="bg-white dark:bg-zinc-800">
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        {{ $row->idakun_api }}
+                                                    </td>
+
+                                                    <td class="px-3 py-2 truncate max-w-[180px]">
+                                                        {{ $row->tipe_api ?? '-' }}
+                                                    </td>
+
+                                                    <td class="px-3 py-2">
+                                                        <div class="truncate max-w-[260px]"
+                                                            title="{{ $row->ket_api }}">
+                                                            {{ $deskripsi }}
+                                                        </div>
+                                                    </td>
+
+                                                    <td class="px-3 py-2 align-top">
+
+                                                        {{-- DEFAULT INPUT --}}
+                                                        <div class="flex items-center justify-end gap-2 mb-2">
+                                                            <select wire:model="budgetTypes.{{ $key }}"
+                                                                class="text-[10px] border border-gray-300 dark:border-zinc-600
+                                                               rounded px-1.5 py-0.5">
+                                                                <option class="text-black" value="rupiah">Rp / hari
+                                                                </option>
+                                                                <option class="text-black" value="persen">% dari
+                                                                    penjualan</option>
+                                                            </select>
+
+                                                            <input type="text" x-data="moneyFormat()"
+                                                                x-on:input="formatInput($event)"
+                                                                wire:model.live="budgetInputs.{{ $key }}"
+                                                                class="w-28 text-right border border-gray-300 dark:border-zinc-600
+                                                              rounded px-2 py-1 text-xs"
+                                                                placeholder="0">
+                                                        </div>
+
+                                                        {{-- DAILY INPUT --}}
+                                                        <div class="grid grid-cols-7 gap-1 text-[9px]">
+                                                            @foreach ($haris as $keyHari => $labelHari)
+                                                                <div class="flex flex-col gap-0.5 text-center">
+                                                                    <span
+                                                                        class="text-gray-500">{{ $labelHari }}</span>
+                                                                    <input type="text" x-data="moneyFormat()"
+                                                                        x-on:input="formatInput($event)"
+                                                                        wire:model.live="dailyBudgets.{{ $key }}.{{ $keyHari }}"
+                                                                        class="w-full text-right border border-gray-200 dark:border-zinc-700
+                                                                      rounded px-1 py-0.5"
+                                                                        placeholder="0">
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+
+                                                        {{-- FALLBACK INFO --}}
+                                                        @if (!empty($fallbackInfo[$key]))
+                                                            <div class="text-[10px] text-amber-600 mt-1 italic">
+                                                                {{ $fallbackInfo[$key] }}
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- ================= FOOTER ================= --}}
+                        <div
+                            class="flex justify-end gap-2 px-4 py-3
+                       border-t border-gray-100 dark:border-zinc-700">
+
+                            <button type="button" wire:click="$set('showBudgetModal', false)"
+                                class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300
+                               text-gray-800 rounded text-xs">
+                                Batal
+                            </button>
+
+                            <button type="button" wire:click="saveBudgets"
+                                class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700
+                               text-white rounded text-xs font-semibold">
+                                Simpan Budget
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
         @endif
+
 
     </div>
     @push('scripts')
@@ -360,12 +411,20 @@
     @endpush
     <style>
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(3px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(3px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .animate-fade-in {
             animation: fadeIn 0.25s ease-out both;
         }
-        </style>
+    </style>
 
 </div>

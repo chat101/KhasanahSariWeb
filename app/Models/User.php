@@ -14,6 +14,8 @@ use Illuminate\Notifications\Notifiable;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\MasterToko;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request; // ✅ ini yang benar
 class User extends Authenticatable
 {
@@ -25,7 +27,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $fillable = ['name', 'email', 'password', 'role', 'divisi_id', 'area_id', 'wilayah_id'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'divisi_id', 'area_id', 'wilayah_id', 'toko_id'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -113,12 +115,22 @@ class User extends Authenticatable
                 'items'  => [],
             ],
             'area' => [
-                'groups' => ['masterdata',  'operasional','accounting', 'laporan'],
-                'items'  => [], // kosong = semua item pada grup yang diizinkan
+                'groups' => [ 'operasional'],
+                 'items'  => [
+                      'operasional' => ['kontribusi-harian-toko','sisa-sales'],
+                    ], // kosong = semua item pada grup yang diizinkan
             ],
             'wilayah' => [
-                'groups' => ['masterdata',  'operasional','accounting', 'laporan'],
-                'items'  => [], // kosong = semua item pada grup yang diizinkan
+                'groups' => [ 'operasional'],
+               'items'  => [
+                      'operasional' => ['kontribusi-harian-toko','sisa-sales'],
+                    ], // kosong = semua item pada grup yang diizinkan
+            ],
+            'kasir' => [
+                'groups' => [ 'operasional'],
+                'items'  => [
+                      'operasional' => ['kontribusi-harian-toko'],
+                    ], // kosong = semua item pada grup yang diizinkan
             ],
         ];
     }
@@ -214,7 +226,7 @@ public function wilayahLangsung()
 }
 public function wilayah()
 {
-    if ($this->area_id) {
+    if ($this->area_id && $this->area) {
         return $this->area->wilayah();
     }
 
@@ -244,5 +256,72 @@ public function getWilayahNamaAttribute()
     // kalau tidak, ambil dari wilayah_id langsung
     return $this->wilayahLangsung?->nama_wilayah;
 }
+public function toko()
+{
+    return $this->belongsTo(\App\Models\MasterToko::class, 'toko_id');
+}
 
+
+// Catatan: kamu bebas penamaan role kasirnya apa, tinggal masukin ke in_array(...).
+public function scopeTokosQuery($query)
+{
+    $role = strtolower(trim((string) $this->role));
+
+    $q = MasterToko::query()->where('status', 1);
+
+    // Admin / finance pusat → semua toko
+    if (in_array($role, ['admin', 'finance', 'manager_finance'])) {
+        return $q;
+    }
+
+    // Kasir / personil toko → hanya 1 toko
+    if (in_array($role, ['kasir','personil','personil_toko']) && $this->toko_id) {
+        return $q->where('id', $this->toko_id);
+    }
+
+    // Area
+    if ($role === 'area' && $this->area_id) {
+        return $q->where('area_id', $this->area_id);
+    }
+
+    // Wilayah
+    if ($role === 'wilayah' && $this->wilayah_id) {
+        return $q->whereHas('area', fn ($a) =>
+            $a->where('wilayah_id', $this->wilayah_id)
+        );
+    }
+
+    // Default aman → tidak dapat toko
+    return $q->whereRaw('1=0');
+}
+public function tokosQuery(): Builder
+{
+    $role = strtolower(trim((string) ($this->role ?? '')));
+
+    // ADMIN / pusat => semua toko
+    if ($role === 'admin') {
+        return MasterToko::query();
+    }
+
+    // KASIR / personil toko => 1 toko sesuai toko_id
+    if (in_array($role, ['kasir','personil','personil_toko'], true)) {
+        return MasterToko::query()
+            ->when($this->toko_id, fn ($q) => $q->where('id', $this->toko_id))
+            // kalau toko_id null -> hasilnya kosong (biar ketahuan misconfig)
+            ->whereNotNull('id');
+    }
+
+    // AREA
+    if (!empty($this->area_id)) {
+        return MasterToko::query()->where('area_id', $this->area_id);
+    }
+
+    // WILAYAH
+    if (!empty($this->wilayah_id)) {
+        return MasterToko::query()->whereHas('area', fn ($q) => $q->where('wilayah_id', $this->wilayah_id));
+    }
+
+    // default: kosong
+    return MasterToko::query()->whereRaw('1=0');
+}
 }

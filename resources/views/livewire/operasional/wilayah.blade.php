@@ -12,17 +12,30 @@
         @endif
 
         <div class="flex items-center justify-between gap-2">
-            <div class="relative w-1/2">
-                <input wire:model.live="search"
-                       class="py-1 pl-8 pr-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full"
-                       type="search" placeholder="Cari wilayah..." />
-                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔎</span>
-            </div>
+            <div></div>
 
             <button wire:click="openModal"
                     class="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white py-1 px-4 text-xs rounded-lg shadow">
                 ➕ Tambah
             </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-3 text-black">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">WL</div>
+                    <div>
+                        <h2 class="text-sm font-semibold">Master Wilayah</h2>
+                        <span class="text-[11px] text-gray-600">Kelola data wilayah</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 mb-2">
+                <div class="w-1/3">
+                    <input wire:model.live="search" class="py-1 pl-8 pr-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari wilayah..." />
+                </div>
+            </div>
         </div>
 
         <div class="overflow-x-auto bg-white p-2 rounded-lg shadow">

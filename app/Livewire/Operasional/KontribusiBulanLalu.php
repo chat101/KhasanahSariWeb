@@ -2,175 +2,68 @@
 
 namespace App\Livewire\Operasional;
 
+use App\Models\MasterToko;
+use App\Models\Operasional\KontribusiHarianJobRow;
+use App\Models\Operasional\LossBahan;
 use App\Models\Operasional\MasterTrendInflasi;
+use App\Models\User;
 use Livewire\Component;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class KontribusiBulanLalu extends Component
 {
     public array $tokosUser = [];
 
-    public $bulanLaluAwal;
-    public $bulanLaluAkhir;
-
     public $periodeAwal;
     public $periodeAkhir;
 
-    public array $rowsBulanLalu = [];
-    public int $sumNetoBulanLalu = 0;
+    public $bulanLaluAwal;
+    public $bulanLaluAkhir;
 
-    protected float $hppRatio = 0.56;
-    public array $totalsByWilayah = [];
-    public array $grandTotals = [];
+    // ✅ hanya simpan key, hasil besar masuk cache (anti corrupt hydrate)
+    public ?string $resultKey = null;
 
     public function mount(array $tokosUser = [], $periodeAwal = null, $periodeAkhir = null)
     {
         $this->tokosUser = $tokosUser;
-
         $this->periodeAwal  = $periodeAwal ?? now()->toDateString();
         $this->periodeAkhir = $periodeAkhir ?? now()->toDateString();
-
         $this->syncBulanLaluRange();
     }
-//    private function fetchBiaya(string $idcab, string $start, string $end): array
-// {
-//     $json = Http::timeout(20)
-//         ->retry(2, 300)
-//         ->get('https://api.khasanahsari-bakery.com/dw/biaya', [
-//             'startDate' => $start,
-//             'endDate'   => $end,
-//             'idcab'     => $idcab, // ✅
-//         ])->json();
-
-//     return $json['data'] ?? [];
-// }
-    private function prefixKet(?string $ket): string
-    {
-        if (!$ket) return '';
-        return trim(explode('XpX', $ket, 2)[0]);
-    }
-
-    // private function sumTotBiaya(array $data, callable $filter): int
-    // {
-    //     return (int) collect($data)
-    //         ->filter($filter)
-    //         ->sum(fn($r) => (int) str_replace([',', '.'], '', (string)($r['totbiaya'] ?? 0)));
-    // }
-
-    private function hitungSelisihBiaya(int $now, int $last): int
-    {
-        return $now - $last;
-    }
-
-    // ini kalau kolom % selisih dibagi nilai itu sendiri
-    // private function hitungSelisihBiaya(int $now, int $last): array
-    // {
-    //     $rp = $now - $last;
-    //     $pct = $last > 0 ? round(($rp / $last) * 100, 2) : null;
-
-    //     return [
-    //         'rp'  => $rp,
-    //         'pct' => is_null($pct) ? '-' : $pct . '%',
-    //     ];
-    // }
 
     private function syncBulanLaluRange(): void
     {
         $this->bulanLaluAwal  = Carbon::parse($this->periodeAwal)->subMonthNoOverflow()->toDateString();
         $this->bulanLaluAkhir = Carbon::parse($this->periodeAkhir)->subMonthNoOverflow()->toDateString();
     }
-    private function hitungKontribusiDariSelisih(int $selisihRp): array
-    {
-        // HPP bagian dari selisih (bisa minus juga kalau selisih minus)
-        $hppSelisih = (int) round($selisihRp * $this->hppRatio);
 
-        // kontribusi = selisih - HPP
-        $kontribusiRp = $selisihRp - $hppSelisih;
+    public function render()
+    {
+        $data = $this->resultKey ? Cache::get($this->resultKey) : null;
 
-        return [
-            'hpp_ratio'     => $this->hppRatio,
-            'hpp_selisih'   => $hppSelisih,
-            'kontribusi_rp' => $kontribusiRp,
-        ];
-    }
-    private function getTrendPersenUntukPeriode(string $periodeAwal): float
-    {
-        $d = Carbon::parse($periodeAwal);
-
-        return (float) (MasterTrendInflasi::query()
-            ->where('tahun', (int) $d->year)
-            ->where('bulan', (int) $d->month)
-            ->value('trend') ?? 0);
-    }
-    private function fetchPenjualanAll(string $start, string $end): array
-    {
-        $json = Http::timeout(20)
-            ->retry(2, 300)
-            ->get('https://api.khasanahsari-bakery.com/dw/sum-penjualan', [
-                'startDate' => $start,
-                'endDate'   => $end,
-            ])->json();
-
-        return $json['data'] ?? [];
-    }
-    private function toInt($v): int
-    {
-        return (int) str_replace([',', '.'], '', (string)($v ?? 0));
-    }
-    private function pctDariPenjualan(int $rp, int $penjualanNow): ?float
-    {
-        if ($penjualanNow <= 0) return null;
-        return round(($rp / $penjualanNow) * 100, 2);
+        return view('livewire.operasional.kontribusi-bulan-lalu', [
+            'rowsBulanLaluView'    => $data['rowsBulanLalu'] ?? [],
+            'grandTotalsView'      => $data['grandTotals'] ?? [],
+            'sumNetoBulanLaluView' => $data['sumNetoBulanLalu'] ?? 0,
+        ]);
     }
 
-    private function fetchReturAll(string $start, string $end): array
+    public function resetBulanLalu()
     {
-        $json = Http::timeout(20)
-            ->retry(2, 300)
-            ->get('https://api.khasanahsari-bakery.com/dw/retur', [
-                'startDate' => $start,
-                'endDate'   => $end,
-            ])->json();
-
-        return $json['data'] ?? [];
-    }
-    //     private function diffRp(int $now, int $last): int
-    // {
-    //     return $now - $last;
-    // }
-
-    // private function pctOfSales(int $rp, int $sales): ?float
-    // {
-    //     if ($sales <= 0) return null;
-    //     return round(($rp / $sales) * 100, 2);
-    // }
-    private function fetchBiayaAll(string $start, string $end): array
-    {
-        $json = Http::timeout(20)
-            ->retry(2, 300)
-            ->get('https://api.khasanahsari-bakery.com/dw/biaya', [
-                'startDate' => $start,
-                'endDate'   => $end,
-            ])->json();
-
-        return $json['data'] ?? [];
+        $this->resultKey = null;
+        $this->periodeAwal  = now()->toDateString();
+        $this->periodeAkhir = now()->toDateString();
+        $this->syncBulanLaluRange();
     }
 
-    private function fetchPenjualan(string $apiId, string $start, string $end): array
-    {
-        $json = Http::timeout(20)
-            ->retry(2, 300)
-            ->get('https://api.khasanahsari-bakery.com/dw/sum-penjualan', [
-                'startDate' => $start,
-                'endDate'   => $end,
-                'idcabang'  => $apiId,
-            ])->json();
-
-        return $json['data'] ?? [];
-    }
-    // Sekarang % disc/gas/telur/retur adalah rasio terhadap penjualanNow,
-    // Sekarang % disc/gas/telur/retur adalah rasio terhadap penjualanNow,
+    // =========================
+    // ACTION
+    // =========================
     public function loadBulanLalu()
     {
         $this->validate([
@@ -180,55 +73,39 @@ class KontribusiBulanLalu extends Component
 
         $this->syncBulanLaluRange();
 
-        $trendNowPct = $this->getTrendPersenUntukPeriode($this->periodeAwal);
+        $start = Carbon::parse($this->periodeAwal)->toDateString();
+        $end   = Carbon::parse($this->periodeAkhir)->toDateString();
 
-        // =========================
-        // 🔥 FETCH SEKALI (OPTIMASI)
-        // =========================
-        $penjualanNowRaw  = collect($this->fetchPenjualanAll($this->periodeAwal, $this->periodeAkhir));
-        $penjualanLastRaw = collect($this->fetchPenjualanAll($this->bulanLaluAwal, $this->bulanLaluAkhir));
+        // id toko dari parent
+        $tokoIdsRaw = collect($this->tokosUser)
+            ->pluck('id')
+            ->map(fn($v) => (int)$v)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
-        $penjualanNowById  = $penjualanNowRaw->groupBy(fn($r) => trim((string)($r['idcabang'] ?? '')));
-        $penjualanLastById = $penjualanLastRaw->groupBy(fn($r) => trim((string)($r['idcabang'] ?? '')));
+        if (empty($tokoIdsRaw)) {
+            $this->resultKey = null;
+            return;
+        }
 
-        // fallback by nama (karena ada key `cabang`)
-        $penjualanNowByName  = $penjualanNowRaw->groupBy(fn($r) => trim((string)($r['cabang'] ?? '')));
-        $penjualanLastByName = $penjualanLastRaw->groupBy(fn($r) => trim((string)($r['cabang'] ?? '')));
-
-        // BIAYA sudah kamu ubah pakai idcab (lebih presisi ✅)
-        $biayaNowAll = collect($this->fetchBiayaAll($this->periodeAwal, $this->periodeAkhir))
-            ->groupBy(fn($r) => trim((string)($r['idcab'] ?? '')));
-
-        $biayaLastAll = collect($this->fetchBiayaAll($this->bulanLaluAwal, $this->bulanLaluAkhir))
-            ->groupBy(fn($r) => trim((string)($r['idcab'] ?? '')));
-
-        // ✅ RETUR (group by idcab)
-        $returNowAll = collect($this->fetchReturAll($this->periodeAwal, $this->periodeAkhir))
-            ->groupBy(fn($r) => trim((string)($r['idcab'] ?? '')));
-
-        $returLastAll = collect($this->fetchReturAll($this->bulanLaluAwal, $this->bulanLaluAkhir))
-            ->groupBy(fn($r) => trim((string)($r['idcab'] ?? '')));
-
-        // ✅ LOSS BAHAN: ambil SEKALI dari DB, lalu map by toko_id
-        $lossMap = \App\Models\Operasional\LossBahan::query()
-            ->whereBetween('tanggal', [$this->periodeAwal, $this->periodeAkhir])
-            ->selectRaw('toko_id, SUM(nominal) as total')
-            ->groupBy('toko_id')
-            ->pluck('total', 'toko_id'); // [toko_id => total]
-
-        $rows = [];
-        $grand = 0;
-        $tokoIds = collect($this->tokosUser)->pluck('id')->filter()->values();
-
-        // ambil toko lokal + area + wilayah
-        $tokoLocal = \App\Models\MasterToko::query()
+        // toko aktif saja
+        $tokoLocal = MasterToko::query()
             ->with(['area.wilayah'])
-            ->whereIn('id', $tokoIds)
+            ->whereIn('id', $tokoIdsRaw)
+            ->where('status', '1')
             ->get()
             ->keyBy('id');
 
-        // ambil PIC AREA (role area) map: [area_id => name]
-        $picAreaByAreaId = \App\Models\User::query()
+        $tokoIds = $tokoLocal->keys()->map(fn($v) => (int)$v)->values()->all();
+        if (empty($tokoIds)) {
+            $this->resultKey = null;
+            return;
+        }
+
+        // PIC AREA (optional)
+        $picAreaByAreaId = User::query()
             ->select('name', 'area_id')
             ->whereNotNull('area_id')
             ->whereRaw("LOWER(TRIM(role)) = 'area'")
@@ -237,227 +114,313 @@ class KontribusiBulanLalu extends Component
             ->groupBy('area_id')
             ->map(fn($g) => $g->pluck('name')->filter()->implode(', '))
             ->toArray();
-        //  dd($picAreaByAreaId);
-        // ambil PIC WILAYAH (role wilayah) map: [wilayah_id => name]
-        $picWilByWilayahId = \App\Models\User::query()
-            ->select('id', 'name', 'role', 'wilayah_id')
-            ->where('role', 'wilayah')
-            ->whereNotNull('wilayah_id')
-            ->get()
-            ->groupBy('wilayah_id')
-            ->map(fn($g) => $g->first()?->name)
-            ->toArray();
 
+        // loss SUM per toko (range sekarang)
+        $lossByToko = $this->fetchLossBahanByToko($tokoIds, $start, $end);
 
-        foreach ($this->tokosUser as $t) {
+        // =========================
+        // 1) Ambil latest row per (toko,tgl) untuk jenis BY BULAN LALU
+        // =========================
+        $rowsSnap = KontribusiHarianJobRow::query()
+            ->select(['id','job_id','tanggal','jenis','payload'])
+            ->whereBetween('tanggal', [$start, $end])
+            ->where('jenis', 'BY BULAN LALU')
+            ->whereHas('job', fn($q) => $q->whereIn('toko_id', $tokoIds)->where('status', 'ok'))
+            ->with(['job:id,toko_id'])
+            ->orderBy('tanggal')
+            ->orderByDesc('id') // penting: pick terbaru per toko+tgl
+            ->get();
 
-            $tokoId = (int)($t['id'] ?? 0);
+        $picked = []; // [tokoId|tgl => payload array]
+        foreach ($rowsSnap as $r) {
+            $tokoId = (int) ($r->job?->toko_id ?? 0);
+            $tgl    = (string) ($r->tanggal ?? '');
+            if ($tokoId <= 0 || $tgl === '') continue;
+
+            $k = $tokoId.'|'.$tgl;
+            if (isset($picked[$k])) continue;
+
+            $p = $r->payload;
+
+            // payload bisa json string / object / array
+            if (is_string($p)) $p = json_decode($p, true) ?: [];
+            elseif (is_object($p)) $p = (array)$p;
+            elseif (!is_array($p)) $p = [];
+
+            // kalau payload nested
+            if (isset($p['by_bulan_lalu']) && is_array($p['by_bulan_lalu'])) $p = $p['by_bulan_lalu'];
+
+            $picked[$k] = $p;
+        }
+
+        // =========================
+        // 2) Agregasi per toko (SUM) + simpan basis (hrg & baseline)
+        // =========================
+        $agg = []; // [tokoId => sums]
+        foreach ($picked as $k => $p) {
+            [$tokoIdStr] = explode('|', $k, 2);
+            $tokoId = (int)$tokoIdStr;
+
+            $hrg = $this->getHrgFromPayload($p); // ✅ FIX utama (jangan cuma hrg/sales_rp)
+            $selisihRp = $this->toInt($p['selisih_rp'] ?? 0);
+
+            // baseline = hrgNow - selisihRp
+            $baseline = $hrg - $selisihRp;
+
+            $agg[$tokoId] ??= [
+                'hrg' => 0,
+                'baseline' => 0,
+
+                'selisih_rp' => 0,
+                'kontribusi_rp' => 0,
+
+                'disc_rp' => 0,
+                'retur_rp' => 0,
+                'gas_rp' => 0,
+                'telur_rp' => 0,
+
+                'total_kontribusi' => 0,
+            ];
+
+            $agg[$tokoId]['hrg']      += $hrg;
+            $agg[$tokoId]['baseline'] += max(0, (int)$baseline);
+
+            $agg[$tokoId]['selisih_rp']    += $selisihRp;
+            $agg[$tokoId]['kontribusi_rp'] += $this->toInt($p['kontribusi_rp'] ?? ($p['kontribusi'] ?? 0));
+
+            $agg[$tokoId]['disc_rp']  += $this->toInt($p['disc_rp']  ?? ($p['sc_manual_rp'] ?? 0));
+            $agg[$tokoId]['retur_rp'] += $this->toInt($p['retur_rp'] ?? 0);
+            $agg[$tokoId]['gas_rp']   += $this->toInt($p['gas_rp']   ?? 0);
+            $agg[$tokoId]['telur_rp'] += $this->toInt($p['telur_rp'] ?? 0);
+
+            $agg[$tokoId]['total_kontribusi'] += $this->toInt($p['total_kontribusi'] ?? ($p['total'] ?? 0));
+        }
+
+        // =========================
+        // 3) Build rows view (persen = weighted pakai base)
+        //    - jika base 0 => persen NULL (biar Blade tampil "-")
+        // =========================
+        $pct = function(int $rp, int $base): ?float {
+            if ($base <= 0) return null;
+            return round(($rp / $base) * 100, 2);
+        };
+
+        $outRows = [];
+        foreach ($tokoIds as $tokoId) {
             $tokoDb = $tokoLocal[$tokoId] ?? null;
+            if (!$tokoDb) continue;
 
-            $areaId = (int) ($tokoDb?->area_id ?? 0);
-            $pic = $areaId > 0 ? ($picAreaByAreaId[$areaId] ?? '') : '';
-            $picArea = $areaId > 0
-                ? ($picAreaByAreaId[$areaId] ?? '')
-                : '';
-            $wilayahLabel = $tokoDb?->area?->wilayah?->nama_wilayah
-                ?: ($tokoDb?->area?->wilayah_id ? 'WILAYAH-' . $tokoDb->area->wilayah_id : '-');
-            $namaArea    = $tokoDb?->area?->nama_area;
-            // $wilayahId   = $tokoDb?->area?->wilayah_id; // penting utk fallback wilayah
+            $a = $agg[$tokoId] ?? null;
+            if (!$a) continue;
 
+            $hrg      = (int)$a['hrg'];
+            $baseline = (int)$a['baseline'];
 
-            // $picWilayah = $wilayahId
-            //     ? ($picWilByWilayahId[$wilayahId] ?? null)
-            //     : null;
+            $loss = (int) ($lossByToko[$tokoId] ?? 0);
 
-            // prioritas: PIC area -> kalau kosong pakai PIC wilayah
-            // $picTampil = $picArea ?: $picWilayah;            // pastikan tokosUser bawa id lokal
+            $areaId = (int)($tokoDb->area_id ?? 0);
+            $areaLabel = $tokoDb->area?->nama_area ?: '-';
+            $areaPic = $areaId > 0 ? ($picAreaByAreaId[$areaId] ?? '') : '';
+            $wilayahLabel = $tokoDb->area?->wilayah?->nama_wilayah ?: '-';
 
-            $apiId   = trim((string)($t['api_id'] ?? ''));   // id cab API
-            $apiName = trim((string)($t['nmcab'] ?? $t['nmtoko'] ?? ''));
-            $outlet  = $t['nmtoko'] ?? '-';
+            $selisihRp = (int)$a['selisih_rp'];
 
-            // ================= PENJUALAN =================
-            $penNowRows  = $penjualanNowById[$apiId]  ?? $penjualanNowByName[$apiName]  ?? collect();
-            $penLastRows = $penjualanLastById[$apiId] ?? $penjualanLastByName[$apiName] ?? collect();
-
-            $penjualanNow  = (int) $penNowRows->sum(fn($r) => $this->toInt($r['hrg'] ?? 0));
-            $penjualanLast = (int) $penLastRows->sum(fn($r) => $this->toInt($r['hrg'] ?? 0));
-
-            $baseline   = (int) round($penjualanLast * (1 + ($trendNowPct / 100)));
-            $selisihRp  = $penjualanNow - $baseline;
-            $selisihPct = $baseline > 0 ? round(($selisihRp / $baseline) * 100, 2) : null;
-
-            $k = $this->hitungKontribusiDariSelisih($selisihRp);
-
-            // ================= BIAYA =================
-            $biayaNow  = collect($biayaNowAll[$apiId]  ?? []);
-            $biayaLast = collect($biayaLastAll[$apiId] ?? []);
-
-            $discNow = (int) $biayaNow
-                ->filter(fn($r) => strtoupper((string)($r['tipe'] ?? '')) === 'DISKON MANUAL')
-                ->sum(fn($r) => $this->toInt($r['totbiaya'] ?? 0));
-
-            $discLast = (int) $biayaLast
-                ->filter(fn($r) => strtoupper((string)($r['tipe'] ?? '')) === 'DISKON MANUAL')
-                ->sum(fn($r) => $this->toInt($r['totbiaya'] ?? 0));
-
-            $gasNow = (int) $biayaNow
-                ->filter(fn($r) => $this->prefixKet($r['ket'] ?? '') === 'Gas')
-                ->sum(fn($r) => $this->toInt($r['totbiaya'] ?? 0));
-
-            $gasLast = (int) $biayaLast
-                ->filter(fn($r) => $this->prefixKet($r['ket'] ?? '') === 'Gas')
-                ->sum(fn($r) => $this->toInt($r['totbiaya'] ?? 0));
-
-            $telNow = (int) $biayaNow
-                ->filter(fn($r) => $this->prefixKet($r['ket'] ?? '') === 'Telur')
-                ->sum(fn($r) => $this->toInt($r['totbiaya'] ?? 0));
-
-            $telLast = (int) $biayaLast
-                ->filter(fn($r) => $this->prefixKet($r['ket'] ?? '') === 'Telur')
-                ->sum(fn($r) => $this->toInt($r['totbiaya'] ?? 0));
-
-            // $disc = $this->hitungSelisihBiaya($discNow, $discLast);
-            // $gas  = $this->hitungSelisihBiaya($gasNow,  $gasLast);
-            // $tel  = $this->hitungSelisihBiaya($telNow,  $telLast);
-
-            // // ================= RETUR =================
-            // $returNow = (int) collect($returNowAll[$apiId] ?? [])
-            //     ->sum(fn($r) => $this->toInt($r['tot_hrg'] ?? 0));
-
-            // $returLast = (int) collect($returLastAll[$apiId] ?? [])
-            //     ->sum(fn($r) => $this->toInt($r['tot_hrg'] ?? 0));
-
-            // $returRp = $returNow - $returLast;
-
-            // // % retur = selisih retur / penjualanNow
-            // $returPct = $penjualanNow > 0 ? round(($returRp / $penjualanNow) * 100, 2) : null;
-
-            // selisih Rp vs bulan lalu
-            $discRp = $this->hitungSelisihBiaya($discNow, $discLast);
-            $gasRp  = $this->hitungSelisihBiaya($gasNow,  $gasLast);
-            $telRp  = $this->hitungSelisihBiaya($telNow,  $telLast);
-
-            // % semua kolom = RP / penjualanNow
-            $discPct = $this->pctDariPenjualan($discRp, $penjualanNow);
-            $gasPct  = $this->pctDariPenjualan($gasRp,  $penjualanNow);
-            $telPct  = $this->pctDariPenjualan($telRp,  $penjualanNow);
-
-            // RETUR
-            $returNow  = (int) collect($returNowAll[$apiId] ?? [])->sum(fn($r) => $this->toInt($r['tot_hrg'] ?? 0));
-            $returLast = (int) collect($returLastAll[$apiId] ?? [])->sum(fn($r) => $this->toInt($r['tot_hrg'] ?? 0));
-
-            $returRp  = $returNow - $returLast;
-            $returPct = $this->pctDariPenjualan($returRp, $penjualanNow);
-            // ================= LOSS BAHAN =================
-            // LOSS
-            $loss = (int) ($lossMap[$tokoId] ?? 0);
-
-            $grand += $penjualanNow;
-
-            // total kontribusi: kamu minta (+disc +gas +tel) - loss
-            // (retur mau kamu masukkan? kalau iya, biasanya retur mengurangi kontribusi -> -returRp)
-            $totalKontribusi = $k['kontribusi_rp'] + $discRp + $gasRp + $telRp - $loss - $returRp;
-
-            $rows[] = [
+            $outRows[] = [
                 'wilayah_label' => $wilayahLabel,
-                'area_label' => $tokoDb?->area?->nama_area ?: '-',
-                'area_pic'   => $picArea, // bisa "panji, retno" atau ''
-                'area_pic' => $pic,
-                'outlet' => $outlet,
+                'area_label'    => $areaLabel,
+                'area_pic'      => $areaPic,
+                'outlet'        => (string)($tokoDb->nmtoko ?? '-'),
+
+                // base (opsional untuk debug / grand total)
+                'hrg'           => $hrg,
+                'baseline'      => $baseline,
+
+                // selisih% ikut rumus Harian (selisih / baseline)
+                'selisih_persen' => $baseline > 0 ? round(($selisihRp / $baseline) * 100, 2) : null,
                 'selisih_rp'     => $selisihRp,
-                'selisih_persen' => is_null($selisihPct) ? '-' : $selisihPct . '%',
+                'kontribusi_rp'  => (int)$a['kontribusi_rp'],
 
-                'hpp_ratio'     => $k['hpp_ratio'],
-                'hpp_selisih'   => $k['hpp_selisih'],
-                'kontribusi_rp' => $k['kontribusi_rp'],
+                // % lain ikut Harian: rp / hrgNow
+                'sc_manual_persen' => $pct((int)$a['disc_rp'], $hrg),
+                'sc_manual_rp'     => (int)$a['disc_rp'],
 
-                // 'sc_manual_persen' => $disc['pct'],
-                // 'sc_manual_rp'     => $disc['rp'],
+                'retur_persen' => $pct((int)$a['retur_rp'], $hrg),
+                'retur_rp'     => (int)$a['retur_rp'],
 
-                // 'retur_persen' => is_null($returPct) ? '-' : $returPct . '%',
-                // 'retur_rp'     => $returRp,
+                'gas_persen' => $pct((int)$a['gas_rp'], $hrg),
+                'gas_rp'     => (int)$a['gas_rp'],
 
-                // 'gas_persen' => $gas['pct'],
-                // 'gas_rp'     => $gas['rp'],
+                'telur_persen' => $pct((int)$a['telur_rp'], $hrg),
+                'telur_rp'     => (int)$a['telur_rp'],
 
-                // 'telur_persen' => $tel['pct'],
-                // 'telur_rp'     => $tel['rp'],
-
-                'sc_manual_persen' => is_null($discPct) ? '-' : ($discPct . '%'),
-                'sc_manual_rp'     => $discRp,
-
-                'retur_persen' => is_null($returPct) ? '-' : ($returPct . '%'),
-                'retur_rp'     => $returRp,
-
-                'gas_persen' => is_null($gasPct) ? '-' : ($gasPct . '%'),
-                'gas_rp'     => $gasRp,
-
-                'telur_persen' => is_null($telPct) ? '-' : ($telPct . '%'),
-                'telur_rp'     => $telRp,
                 'loss_bahan' => $loss,
 
-                'total_kontribusi' => $totalKontribusi,
+                // total kontribusi di laporan = payload_total - loss
+                'total_kontribusi' => (int)$a['total_kontribusi'] - $loss,
             ];
         }
-        $rows = collect($rows)
-            ->sort(function ($a, $b) {
-                $w = strcasecmp($a['wilayah_label'] ?? '', $b['wilayah_label'] ?? '');
-                if ($w !== 0) return $w;
 
-                $area = strcasecmp($a['area_label'] ?? '', $b['area_label'] ?? '');
-                if ($area !== 0) return $area;
-
-                return strcasecmp($a['outlet'] ?? '', $b['outlet'] ?? '');
-            })
+        $outRows = collect($outRows)
+            ->sortBy([['wilayah_label','asc'],['area_label','asc'],['outlet','asc']])
             ->values()
             ->all();
-        $totalsByWilayah = collect($rows)
-            ->groupBy(fn($r) => $r['wilayah_label'] ?? '-')
-            ->map(function ($g) {
-                return [
-                    'selisih_rp'        => $g->sum(fn($r) => (int)($r['selisih_rp'] ?? 0)),
-                    'kontribusi_rp'     => $g->sum(fn($r) => (int)($r['kontribusi_rp'] ?? 0)),
-                    'sc_manual_rp'      => $g->sum(fn($r) => (int)($r['sc_manual_rp'] ?? 0)),
-                    'retur_rp'          => $g->sum(fn($r) => (int)($r['retur_rp'] ?? 0)),
-                    'gas_rp'            => $g->sum(fn($r) => (int)($r['gas_rp'] ?? 0)),
-                    'telur_rp'          => $g->sum(fn($r) => (int)($r['telur_rp'] ?? 0)),
-                    'loss_bahan'        => $g->sum(fn($r) => (int)($r['loss_bahan'] ?? 0)),
-                    'total_kontribusi'  => $g->sum(fn($r) => (int)($r['total_kontribusi'] ?? 0)),
-                ];
-            })
-            ->toArray();
+
+        // =========================
+        // 4) GRAND TOTAL (WEIGHTED)
+        // =========================
+        $sumHrg      = (int) collect($outRows)->sum('hrg');
+        $sumBaseline = (int) collect($outRows)->sum('baseline');
+
+        $sumSelisih  = (int) collect($outRows)->sum('selisih_rp');
+        $sumKontrib  = (int) collect($outRows)->sum('kontribusi_rp');
+
+        $sumDisc     = (int) collect($outRows)->sum('sc_manual_rp');
+        $sumRetur    = (int) collect($outRows)->sum('retur_rp');
+        $sumGas      = (int) collect($outRows)->sum('gas_rp');
+        $sumTelur    = (int) collect($outRows)->sum('telur_rp');
+
+        $sumLoss     = (int) collect($outRows)->sum('loss_bahan');
+        $sumTotal    = (int) collect($outRows)->sum('total_kontribusi');
 
         $grandTotals = [
-            'selisih_rp'       => collect($rows)->sum(fn($r) => (int)($r['selisih_rp'] ?? 0)),
-            'kontribusi_rp'    => collect($rows)->sum(fn($r) => (int)($r['kontribusi_rp'] ?? 0)),
-            'sc_manual_rp'     => collect($rows)->sum(fn($r) => (int)($r['sc_manual_rp'] ?? 0)),
-            'retur_rp'         => collect($rows)->sum(fn($r) => (int)($r['retur_rp'] ?? 0)),
-            'gas_rp'           => collect($rows)->sum(fn($r) => (int)($r['gas_rp'] ?? 0)),
-            'telur_rp'         => collect($rows)->sum(fn($r) => (int)($r['telur_rp'] ?? 0)),
-            'loss_bahan'       => collect($rows)->sum(fn($r) => (int)($r['loss_bahan'] ?? 0)),
-            'total_kontribusi' => collect($rows)->sum(fn($r) => (int)($r['total_kontribusi'] ?? 0)),
+            'selisih_persen' => $sumBaseline > 0 ? round(($sumSelisih / $sumBaseline) * 100, 2) : null,
+            'selisih_rp'     => $sumSelisih,
+            'kontribusi_rp'  => $sumKontrib,
+
+            'sc_manual_persen' => $pct($sumDisc, $sumHrg),
+            'sc_manual_rp'     => $sumDisc,
+
+            'retur_persen' => $pct($sumRetur, $sumHrg),
+            'retur_rp'     => $sumRetur,
+
+            'gas_persen' => $pct($sumGas, $sumHrg),
+            'gas_rp'     => $sumGas,
+
+            'telur_persen' => $pct($sumTelur, $sumHrg),
+            'telur_rp'     => $sumTelur,
+
+            'loss_bahan' => $sumLoss,
+            'total_kontribusi' => $sumTotal,
         ];
-        $this->rowsBulanLalu    = $rows;
-        $this->totalsByWilayah  = $totalsByWilayah;
-        $this->grandTotals      = $grandTotals;
-        $this->sumNetoBulanLalu = $grand; // punya kamu
+
+        // simpan cache hasil besar
+        $key = $this->makeResultKey($start, $end, $tokoIds);
+
+        Cache::put($key, [
+            'rowsBulanLalu'     => $outRows,
+            'grandTotals'       => $grandTotals,
+            'sumNetoBulanLalu'  => 0,
+        ], now()->addMinutes(10));
+
+        $this->resultKey = $key;
     }
 
-
-    public function resetBulanLalu()
+    // =========================
+    // Helpers: cache key
+    // =========================
+    private function makeResultKey(string $start, string $end, array $tokoIds): string
     {
-        $this->rowsBulanLalu = [];
-        $this->sumNetoBulanLalu = 0;
+        sort($tokoIds);
+        $userId = (int) Auth::id();
 
-        $this->periodeAwal  = now()->toDateString();
-        $this->periodeAkhir = now()->toDateString();
-
-        $this->syncBulanLaluRange();
+        return 'kontribusi_bulan_lalu:result:v2:' . md5($userId . '|' . $start . '|' . $end . '|' . implode(',', $tokoIds));
     }
 
-    public function render()
+    // =========================
+    // Helpers: parsing angka
+    // =========================
+    private function toInt($v): int
     {
-        return view('livewire.operasional.kontribusi-bulan-lalu');
+        if ($v === null) return 0;
+
+        if (is_string($v)) {
+            $v = trim($v);
+            if ($v === '' || $v === '-') return 0;
+
+            $v = str_replace(['Rp', 'rp', ' '], '', $v);
+
+            // "1.234.567" => "1234567"
+            // "1.234,56"  => "1234.56"
+            if (str_contains($v, ',') && str_contains($v, '.')) {
+                $v = str_replace('.', '', $v);
+                $v = str_replace(',', '.', $v);
+            } else {
+                $v = str_replace('.', '', $v);
+                $v = str_replace(',', '.', $v);
+            }
+        }
+
+        return (int) round((float) $v);
+    }
+
+    private function toFloat($v): ?float
+    {
+        if ($v === null) return null;
+
+        if (is_string($v)) {
+            $v = trim(str_replace('%', '', $v));
+            if ($v === '' || $v === '-') return null;
+            $v = str_replace(['.', ','], ['', '.'], $v);
+        }
+
+        return is_numeric($v) ? (float) $v : null;
+    }
+
+    private function getHrgFromPayload(array $p): int
+    {
+        // prioritas basis penjualan "sekarang"
+        $keys = [
+            'hrg',
+            'sales_rp',
+            'penjualan_rp',
+            'omzet_rp',
+            'neto_rp',
+            'neto',
+            'sales',
+            'penjualan',
+            'total_sales_rp',
+            'total_penjualan_rp',
+        ];
+
+        foreach ($keys as $k) {
+            if (array_key_exists($k, $p)) {
+                $n = $this->toInt($p[$k]);
+                if ($n !== 0) return $n;
+            }
+        }
+
+        // fallback: estimasi dari selisih_rp & selisih_persen (kalau ada)
+        $sel = $this->toInt($p['selisih_rp'] ?? 0);
+        $pct = $this->toFloat($p['selisih_persen'] ?? ($p['selisih_pct'] ?? null));
+
+        if ($sel !== 0 && $pct !== null && abs($pct) > 0.00001) {
+            // 100*sel = pct*(hrg - sel)  =>  hrg = (100+pct)*sel/pct
+            $hrg = ((100.0 + $pct) * (float)$sel) / $pct;
+            return (int) round($hrg);
+        }
+
+        return 0;
+    }
+
+    // =========================
+    // Helpers: loss bahan
+    // =========================
+    private function fetchLossBahanByToko(array $tokoIds, string $start, string $end): array
+    {
+        $tokoIds = array_values(array_unique(array_filter(array_map('intval', $tokoIds))));
+        if (empty($tokoIds)) return [];
+
+        $cacheKey = 'loss_bahan:sum:v1:' . md5(json_encode($tokoIds) . "|$start|$end");
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tokoIds, $start, $end) {
+            return LossBahan::query()
+                ->selectRaw('toko_id, SUM(nominal) as total')
+                ->whereBetween('tanggal', [$start, $end])
+                ->whereIn('toko_id', $tokoIds)
+                ->groupBy('toko_id')
+                ->pluck('total', 'toko_id')
+                ->map(fn($v) => (int) $v)
+                ->toArray();
+        });
     }
 }

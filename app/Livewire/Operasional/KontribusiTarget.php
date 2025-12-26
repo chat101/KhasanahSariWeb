@@ -2,895 +2,388 @@
 
 namespace App\Livewire\Operasional;
 
+use App\Models\MasterToko;
+use App\Models\Operasional\KontribusiHarianJobRow;
 use Livewire\Component;
 use Carbon\Carbon;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use App\Models\Operasional\MasterProyeksiKontribusi;
+use App\Models\Operasional\MasterTrendInflasi;
 use App\Models\Operasional\TargetKontribusi;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Operasional\LossBahan;
 
 class KontribusiTarget extends Component
 {
     public array $tokosUser = [];
 
-    public $tanggalAwal;
-    public $tanggalAkhir;
-    public array $rowsTarget = [];
-    public int $sumNetoTarget = 0;
-    public array $totalsByArea = [];
-    public array $grandTotals = [];
-    protected float $hppRatio = 0.56;
+    public $periodeAwal;
+    public $periodeAkhir;
 
-    public function mount(array $tokosUser = [])
+
+
+    // ✅ hanya simpan key, hasil besar di cache
+    public ?string $resultKey = null;
+
+    public function mount(array $tokosUser = [], $periodeAwal = null, $periodeAkhir = null)
     {
         $this->tokosUser = $tokosUser;
-        $this->tanggalAwal = now()->toDateString();
-        $this->tanggalAkhir = now()->toDateString();
+        $this->periodeAwal  = $periodeAwal ?? now()->toDateString();
+        $this->periodeAkhir = $periodeAkhir ?? now()->toDateString();
     }
-    private function fetchPenjualanMany(array $apiIds, string $start, string $end): array
+
+
+
+    public function render()
     {
-        $apiIds = array_values(array_filter(array_unique(array_map('trim', $apiIds))));
-        if (empty($apiIds)) {
-            return [];
-        }
+        $data = $this->resultKey ? Cache::get($this->resultKey) : null;
 
-        $cacheKey = 'kontribusi:penjualan:' . md5($start . '|' . $end . '|' . implode(',', $apiIds));
-
-        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($apiIds, $start, $end) {
-            $responses = Http::timeout(35)
-                ->retry(2, 500)
-                ->pool(function ($pool) use ($apiIds, $start, $end) {
-                    foreach ($apiIds as $id) {
-                        $pool->as($id)->get('https://api.khasanahsari-bakery.com/dw/sum-penjualan', [
-                            'startDate' => $start,
-                            'endDate' => $end,
-                            'idcabang' => $id,
-                        ]);
-                    }
-                });
-
-            $out = [];
-            foreach ($apiIds as $id) {
-                $res = $responses[$id] ?? null;
-
-                // ✅ kalau exception atau null -> kosong
-                if (!$res instanceof Response) {
-                    $out[$id] = [];
-                    continue;
-                }
-
-                if (!$res->successful()) {
-                    $out[$id] = [];
-                    continue;
-                }
-
-                $json = $res->json();
-                $out[$id] = $json['data'] ?? [];
-            }
-
-            return $out;
-        });
+        return view('livewire.operasional.kontribusi-target', [
+            'rowsByTargetView' => $data['rows'] ?? [],
+        'grandTotalsView'  => $data['grandTotals'] ?? [],
+        ]);
     }
-    private function extractDeskripsi(?string $ket): ?string
+
+    public function resetByTarget()
     {
-        if (!$ket) {
-            return null;
-        }
-        $parts = explode('XpX', $ket, 2);
-        return trim($parts[0] ?? $ket);
+        $this->resultKey = null;
+
+        $this->periodeAwal  = now()->toDateString();
+        $this->periodeAkhir = now()->toDateString();
     }
 
-    private function sumBiayaByExtracted($rows, string $needle): int
+    private function pctVal($v): ?float
     {
-        $needle = strtoupper(trim($needle));
-
-        return (int) collect($rows)
-            ->filter(function ($r) use ($needle) {
-                $ket = (string) ($r['ket'] ?? '');
-                $desc = strtoupper(trim((string) $this->extractDeskripsi($ket)));
-                return $desc === $needle;
-            })
-            ->sum(fn($r) => (int) preg_replace('/[^\d\-]/', '', (string) ($r['totbiaya'] ?? 0)));
+        if (is_null($v)) return null;
+        if (is_string($v)) {
+            $v = trim(str_replace('%', '', $v));
+            if ($v === '' || $v === '-') return null;
+        }
+        return is_numeric($v) ? (float)$v : null;
     }
 
-    private function nilaiTargetByRule(?TargetKontribusi $t, bool $isProduksiSendiri): float
-    {
-        if (!$t) {
-            return 0;
-        }
-
-        $pakaiRule = (int) ($t->pakai_rule_produksi ?? 0) === 1;
-
-        if (!$pakaiRule) {
-            return (float) ($t->nilai ?? 0);
-        }
-
-        $v = $isProduksiSendiri ? $t->nilai_produksi_sendiri ?? null : $t->nilai_non_produksi_sendiri ?? null;
-
-        if ($v === null) {
-            $v = $t->nilai ?? 0;
-        }
-
-        return (float) $v;
-    }
-
-    // private function fetchBiaya(string $apiName, string $start, string $end): array
-    // {
-    //     $json = Http::timeout(20)
-    //         ->retry(2, 300)
-    //         ->get('https://api.khasanahsari-bakery.com/dw/biaya', [
-    //             'startDate' => $start,
-    //             'endDate'   => $end,
-    //             'nmcab'     => $apiName,
-    //         ])->json();
-
-    //     return $json['data'] ?? [];
-    // }
-//  private function fetchBiayaMany(array $apiIds, string $start, string $end): array
-// {
-//     $apiIds = array_values(array_filter(array_unique(array_map('trim', $apiIds))));
-//     if (empty($apiIds)) return [];
-
-//     $cacheKey = 'kontribusi:biaya:idcab:' . md5($start.'|'.$end.'|'.implode(',', $apiIds));
-
-//     return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($apiIds, $start, $end) {
-
-//         $responses = Http::timeout(35)
-//             ->retry(2, 500)
-//             ->pool(function ($pool) use ($apiIds, $start, $end) {
-//                 foreach ($apiIds as $idcab) {
-//                     $pool->as($idcab)->get(
-//                         'https://api.khasanahsari-bakery.com/dw/biaya',
-//                         [
-//                             'startDate' => $start,
-//                             'endDate'   => $end,
-//                             'idcab'     => $idcab,   // ✅ PAKAI IDCAB
-//                         ]
-//                     );
-//                 }
-//             });
-
-//         $out = [];
-
-//         foreach ($apiIds as $idcab) {
-//             $res = $responses[$idcab] ?? null;
-
-//             if (!$res instanceof Response || !$res->successful()) {
-//                 $out[$idcab] = ['disc' => 0, 'gas' => 0, 'telur' => 0];
-//                 continue;
-//             }
-
-//             $rows = $res->json('data') ?? [];
-
-//             $disc = 0;
-//             $gas  = 0;
-//             $telur = 0;
-
-//             foreach ($rows as $r) {
-//                 $tipe = strtoupper(trim((string)($r['tipe'] ?? '')));
-//                 $ket  = strtoupper(trim((string)($this->extractDeskripsi($r['ket'] ?? ''))));
-//                 $val  = (int) $this->parseIntMoney($r['totbiaya'] ?? 0);
-
-//                 if ($tipe === 'DISKON MANUAL') $disc += $val;
-//                 if ($ket === 'GAS')           $gas  += $val;
-//                 if ($ket === 'TELUR')         $telur += $val;
-//             }
-
-//             $out[$idcab] = [
-//                 'disc'  => $disc,
-//                 'gas'   => $gas,
-//                 'telur' => $telur,
-//             ];
-//         }
-
-//         return $out;
-//     });
-// }
-private function fetchBiayaByIdcabMap(array $apiIds, string $start, string $end): array
+    /**
+     * ambil latest row per toko per tanggal dari DB
+     * return: [toko_id => [payload,payload,...]] (list payload per hari)
+     */
+/**
+ * Ambil latest row per toko per tanggal (BY TARGET) dari snapshot DB.
+ * Return:
+ *   [
+ *     toko_id => [
+ *        ['tgl'=>..., 'hrg'=>..., 'selisih_rp'=>..., 'disc_rp'=>..., ...],
+ *        ...
+ *     ],
+ *     ...
+ *   ]
+ */
+private function fetchDailyPayloads(array $tokoIds, string $start, string $end): array
 {
-    $apiIds = array_values(array_filter(array_unique(array_map('trim', $apiIds))));
-    if (empty($apiIds)) return [];
+    $tokoIds = array_values(array_unique(array_filter(array_map('intval', $tokoIds))));
+    if (empty($tokoIds)) return [];
 
-    $cacheKey = 'kontribusi:biaya:allmap:' . md5($start.'|'.$end.'|'.implode(',', $apiIds));
+    $cacheKey = 'kontribusi_target:daily_payloads:v2:' . md5(json_encode($tokoIds) . "|$start|$end");
 
-    return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($apiIds, $start, $end) {
+    return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($tokoIds, $start, $end) {
 
-        // ✅ Fetch ALL sekali (karena API belum ada filter cab)
-        $json = Http::timeout(60)
-            ->retry(2, 800)
-            ->get('https://api.khasanahsari-bakery.com/dw/biaya', [
-                'startDate' => $start,
-                'endDate'   => $end,
-            ])->json();
+        $rows = KontribusiHarianJobRow::query()
+            ->select([
+                'id', 'job_id', 'tanggal', 'jenis',
+                'selisih_rp', 'kontribusi_rp',
+                'disc_rp', 'retur_rp', 'gas_rp', 'telur_rp',
+                'loss_bahan', 'total_kontribusi',
+                'payload', // ✅ ambil sales_now dari sini
+            ])
+            ->whereBetween('tanggal', [$start, $end])
+            ->where('jenis', 'BY TARGET')
+            ->whereHas('job', function ($q) use ($tokoIds) {
+                $q->whereIn('toko_id', $tokoIds)
+                  ->where('status', 'ok');
+            })
+            ->with(['job:id,toko_id'])
+            ->orderBy('tanggal', 'asc')
+            ->orderByDesc('id') // ✅ id besar = snapshot terbaru
+            ->get();
 
-        $rows = $json['data'] ?? [];
+        // dedup latest per (toko|tgl)
+        $picked = []; // [ "toko|tgl" => payloadArray ]
+        foreach ($rows as $r) {
+            $tokoId = (int) ($r->job?->toko_id ?? 0);
+            $tgl    = (string) ($r->tanggal ?? '');
 
-        // ✅ group by idcab dari API
-        $group = collect($rows)->groupBy(fn($r) => trim((string)($r['idcab'] ?? '')));
+            if ($tokoId <= 0 || $tgl === '') continue;
 
-        $out = [];
-        foreach ($apiIds as $idcab) {
-            $g = $group[$idcab] ?? collect();
+            $k = $tokoId . '|' . $tgl;
+            if (isset($picked[$k])) continue; // sudah ambil yang paling baru (id desc)
 
-            $disc = (int) $g->filter(fn($r) => strtoupper(trim((string)($r['tipe'] ?? ''))) === 'DISKON MANUAL')
-                ->sum(fn($r) => $this->parseIntMoney($r['totbiaya'] ?? 0));
+            $p = is_array($r->payload) ? $r->payload : (array) $r->payload;
 
-            $gas = (int) $g->filter(function ($r) {
-                    $ket = strtoupper(trim((string)$this->extractDeskripsi($r['ket'] ?? '')));
-                    return $ket === 'GAS';
-                })
-                ->sum(fn($r) => $this->parseIntMoney($r['totbiaya'] ?? 0));
+            // ✅ basis sales (wajib utk hitung % weighted)
+            $hrg = (int) (
+                $p['sales_now']
+                ?? $p['sales']
+                ?? $p['hrg']
+                ?? 0
+            );
 
-            $telur = (int) $g->filter(function ($r) {
-                    $ket = strtoupper(trim((string)$this->extractDeskripsi($r['ket'] ?? '')));
-                    return $ket === 'TELUR';
-                })
-                ->sum(fn($r) => $this->parseIntMoney($r['totbiaya'] ?? 0));
+            $picked[$k] = [
+                'tgl' => $tgl,
+                'hrg' => $hrg,
 
-            $out[$idcab] = ['disc' => $disc, 'gas' => $gas, 'telur' => $telur];
+                'selisih_rp'    => (int) ($r->selisih_rp ?? 0),
+                'kontribusi_rp' => (int) ($r->kontribusi_rp ?? 0),
+
+                'disc_rp'  => (int) ($r->disc_rp ?? 0),
+                'retur_rp' => (int) ($r->retur_rp ?? 0),
+                'gas_rp'   => (int) ($r->gas_rp ?? 0),
+                'telur_rp' => (int) ($r->telur_rp ?? 0),
+
+                'loss_bahan'       => (int) ($r->loss_bahan ?? 0),
+                'total_kontribusi' => (int) ($r->total_kontribusi ?? 0),
+            ];
+        }
+
+        // group by toko_id
+        $out = []; // [toko_id => [payload,payload,...]]
+        foreach ($picked as $k => $payload) {
+            [$tokoIdStr] = explode('|', $k, 2);
+            $tokoId = (int) $tokoIdStr;
+
+            $out[$tokoId] ??= [];
+            $out[$tokoId][] = $payload;
+        }
+
+        // optional: sort payload per toko by tanggal asc (biar stabil)
+        foreach ($out as $tid => $list) {
+            usort($list, fn($a, $b) => strcmp($a['tgl'] ?? '', $b['tgl'] ?? ''));
+            $out[$tid] = $list;
         }
 
         return $out;
     });
 }
-    // private function fetchPenjualan(string $apiId, string $start, string $end): array
-    // {
-    //     $json = Http::timeout(20)
-    //         ->retry(2, 300)
-    //         ->get('https://api.khasanahsari-bakery.com/dw/sum-penjualan', [
-    //             'startDate' => $start,
-    //             'endDate'   => $end,
-    //             'idcabang'  => $apiId,
-    //         ])->json();
 
-    //     return $json['data'] ?? [];
-    // }
-    private function lossBahanMap(array $tokoIds, string $start, string $end): array
-    {
-        $tokoIds = array_values(array_unique(array_map('intval', $tokoIds)));
-        if (empty($tokoIds)) {
-            return [];
-        }
 
-        return \App\Models\Operasional\LossBahan::query()
-            ->selectRaw('toko_id, SUM(nominal) as total')
-            ->whereIn('toko_id', $tokoIds)
-            ->whereBetween('tanggal', [$start, $end])
-            ->groupBy('toko_id')
-            ->pluck('total', 'toko_id')
-            ->map(fn($v) => (int) $v)
-            ->all();
-    }
 
-    // ✅ RETUR: ambil semua (tanpa nmcab), nanti dimap per outlet
-    private function fetchReturAll(string $start, string $end): array
-    {
-        $cacheKey = 'kontribusi:retur:' . md5($start . '|' . $end);
 
-        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($start, $end) {
-            $json = Http::timeout(35)
-                ->retry(2, 500)
-                ->get('https://api.khasanahsari-bakery.com/dw/retur', [
-                    'startDate' => $start,
-                    'endDate' => $end,
-                ])
-                ->json();
-
-            return $json['data'] ?? [];
-        });
-    }
-    private function proyeksiMap(string $start, string $end): array
-    {
-        $start = Carbon::parse($start)->toDateString();
-        $end = Carbon::parse($end)->toDateString();
-
-        $q = MasterProyeksiKontribusi::query();
-
-        if ($start === $end) {
-            $q->whereDate('tanggal', $start);
-        } else {
-            $q->whereDate('tanggal', '>=', $start)->whereDate('tanggal', '<=', $end);
-        }
-
-        return $q->selectRaw('toko_id, SUM(rupiah) as total_rp')->groupBy('toko_id')->pluck('total_rp', 'toko_id')->map(fn($v) => (int) $v)->all();
-    }
-
-    // private function onlyTanggalJikaSingle($col, bool $isSingleDate, string $start)
-    // {
-    //     if (!$isSingleDate) {
-    //         return $col;
-    //     }
-
-    //     return $col->filter(function ($r) use ($start) {
-    //         $tgl = (string) ($r['tglinput'] ?? '');
-    //         return $tgl !== '' && substr($tgl, 0, 10) === $start;
-    //     });
-    // }
-
-    private function parseIntMoney($v): int
-    {
-        return (int) preg_replace('/[^\d\-]/', '', (string) ($v ?? 0));
-    }
-
-    private function targetToRp(?TargetKontribusi $t, bool $isProduksi, int $penjualanHrg): int
-    {
-        if (!$t) {
-            return 0;
-        }
-
-        $tipe = strtoupper((string) ($t->tipe ?? ''));
-        $nilai = $this->nilaiTargetByRule($t, $isProduksi);
-
-        return $tipe === 'PERSEN' ? (int) round(((float) $penjualanHrg) * ($nilai / 100)) : (int) round($nilai);
-    }
-
-    private function selisihTargetReal(int $targetRp, int $realRp, int $penjualanHrg): array
-    {
-        $selisihRp = $targetRp - $realRp;
-        $selisihP = $penjualanHrg > 0 ? round(($selisihRp / $penjualanHrg) * 100, 2) : null;
-        return [$selisihRp, $selisihP];
-    }
-
-    // ✅ Map retur per outlet (pakai nmcab/outlet/cab), akumulasi jika dobel
-    // private function mapReturByOutlet(array $returRows): array
-    // {
-    //     $map = [];
-
-    //     foreach ($returRows as $row) {
-    //         $outlet = strtoupper(trim($row['nmcab'] ?? ($row['outlet'] ?? ($row['cab'] ?? ''))));
-    //         if ($outlet === '') {
-    //             continue;
-    //         }
-
-    //         $rp = (int) ($row['retur_rp'] ?? ($row['nominal'] ?? ($row['rp'] ?? ($row['totretur'] ?? 0))));
-    //         $map[$outlet] = ($map[$outlet] ?? 0) + $rp;
-    //     }
-
-    //     return $map;
-    // }
-
-    // ✅ % = rp / penjualan(hrg) * 100
-    private function persenDariRp(?int $rp, ?int $penjualan): ?float
-    {
-        $rp = (int) ($rp ?? 0);
-        $penjualan = (int) ($penjualan ?? 0);
-
-        if ($penjualan <= 0) {
-            return null;
-        }
-        return round(($rp / $penjualan) * 100, 2);
-    }
-    private function mapReturByIdcab(array $rows): array
-    {
-        $map = [];
-
-        foreach ($rows as $r) {
-            $tipe = strtoupper(trim((string) ($r['tipe'] ?? '')));
-            if ($tipe !== 'RETUR') {
-                continue;
-            } // ✅ hanya tipe Retur
-
-            $idcab = trim((string) ($r['idcab'] ?? ''));
-            if ($idcab === '') {
-                continue;
-            }
-
-            // nominal retur: pakai tot_hrg dari API
-            $rp = (int) $this->parseIntMoney($r['tot_hrg'] ?? 0);
-
-            $map[$idcab] = ($map[$idcab] ?? 0) + $rp;
-        }
-
-        return $map;
-    }
-//     private function aggregatePenjualanPerHari(array $penjualanById): array
-// {
-//     $out = [];
-//     foreach ($penjualanById as $apiId => $rows) {
-//         foreach ($rows as $r) {
-//             $nhari = (string)($r['nhari'] ?? '');
-//             if ($nhari === '') continue;
-
-//             $out[$apiId][$nhari]['hrg']  = ($out[$apiId][$nhari]['hrg']  ?? 0) + (int)($r['hrg']  ?? 0);
-//             $out[$apiId][$nhari]['neto'] = ($out[$apiId][$nhari]['neto'] ?? 0) + (int)($r['neto'] ?? 0);
-//         }
-//     }
-//     return $out;
-// }
-
-// private function aggregateBiayaMany(array $biayaByName, bool $isSingleDate, string $start): array
-// {
-//     $out = [];
-//     foreach ($biayaByName as $apiName => $rows) {
-//         $disc = 0; $gas = 0; $telur = 0;
-
-//         foreach ($rows as $r) {
-//             if ($isSingleDate) {
-//                 $tgl = (string)($r['tglinput'] ?? '');
-//                 if ($tgl === '' || substr($tgl, 0, 10) !== $start) continue;
-//             }
-
-//             $nominal = $this->parseIntMoney($r['totbiaya'] ?? 0);
-
-//             $tipe = strtoupper(trim((string)($r['tipe'] ?? '')));
-//             if ($tipe === 'DISKON MANUAL') {
-//                 $disc += $nominal;
-//                 continue;
-//             }
-
-//             $desc = strtoupper(trim((string)$this->extractDeskripsi((string)($r['ket'] ?? ''))));
-//             if ($desc === 'GAS') $gas += $nominal;
-//             elseif ($desc === 'TELUR') $telur += $nominal;
-//         }
-
-//         $out[$apiName] = ['disc_manual'=>$disc, 'gas'=>$gas, 'telur'=>$telur];
-//     }
-//     return $out;
-// }
-
-    // public function loadTarget()
-    // {
-    //     $this->validate([
-    //         'tanggalAwal' => 'required|date',
-    //         'tanggalAkhir' => 'required|date|after_or_equal:tanggalAwal',
-    //     ]);
-
-    //     $start = Carbon::parse($this->tanggalAwal)->toDateString();
-    //     $end = Carbon::parse($this->tanggalAkhir)->toDateString();
-
-    //     $isSingleDate = $start === $end;
-    //     $nhariSingle = $isSingleDate ? Carbon::parse($start)->format('Ymd') : null;
-
-    //     $mapProyeksi = $this->proyeksiMap($start, $end);
-
-    //     $targets = TargetKontribusi::query()
-    //         ->where('aktif', 1)
-    //         ->whereIn('kode', ['DISC_MANUAL', 'GAS', 'TELUR', 'RETUR']) // ✅ tambah 'RETUR'
-    //         ->get()
-    //         ->keyBy('kode');
-    //     // ✅ kumpulkan id/nama sekali (DULU!)
-    //     $apiIds = [];
-    //     $apiNames = [];
-    //     $tokoIds = [];
-
-    //     foreach ($this->tokosUser as $t) {
-    //         $apiIds[] = trim((string) ($t['api_id'] ?? ''));
-    //         $apiNames[] = trim((string) ($t['api_name'] ?? '')); // pastikan key ini bener di tokosUser
-    //         $tokoIds[] = (int) ($t['id'] ?? 0);
-    //     }
-
-    //     $apiIds = array_values(array_filter(array_unique($apiIds)));
-    //     $apiNames = array_values(array_filter(array_unique($apiNames)));
-    //     $tokoIds = array_values(array_filter(array_unique($tokoIds)));
-
-    //     // ✅ baru ambil toko lokal + area
-    //     $tokoLocal = \App\Models\MasterToko::query()
-    //         ->with(['area']) // kalau ada wilayah: ->with(['area.wilayah'])
-    //         ->whereIn('id', $tokoIds)
-    //         ->get()
-    //         ->keyBy('id');
-    //     // ✅ ambil PIC AREA (role area) map: [area_id => "Nama1, Nama2"]
-    //     $picAreaByAreaId = \App\Models\User::query()
-    //         ->select('name', 'area_id')
-    //         ->whereNotNull('area_id')
-    //         ->whereRaw("LOWER(TRIM(role)) = 'area'")
-    //         ->orderBy('name')->get()
-    //         ->groupBy('area_id')
-    //         ->map(fn($g) => $g
-    //         ->pluck('name')
-    //         ->filter()
-    //         ->implode(', '))
-    //         ->toArray();
-    //     // ✅ loss bahan map (jangan di-comment)
-    //     $lossMap = $this->lossBahanMap($tokoIds, $start, $end);
-    //     $targetDisc = $targets->get('DISC_MANUAL');
-    //     $targetGas = $targets->get('GAS');
-    //     $targetTelur = $targets->get('TELUR');
-    //     $targetRetur = $targets->get('RETUR'); // ✅ tambah ini
-
-    //     // foreach ($this->tokosUser as $t) {
-    //     //     $apiIds[] = (string) ($t['api_id'] ?? '');
-    //     //     $apiNames[] = (string) ($t['api_name'] ?? '');
-    //     //     $tokoIds[] = (int) ($t['id'] ?? 0);
-    //     // }
-
-    //     // ✅ batch hit API (paralel)
-    //     $penjualanById = $this->fetchPenjualanMany($apiIds, $start, $end); // [api_id => rows]
-    //   $biayaById = $this->fetchBiayaMany($apiIds, $start, $end);
-
-    //     // ✅ retur 1x
-    //     $returAll = $this->fetchReturAll($start, $end);
-    //     $returMap = $this->mapReturByIdcab($returAll);
-
-    //     // // ✅ loss bahan 1x untuk semua toko
-    //     $lossMap = $this->lossBahanMap($tokoIds, $start, $end);
-
-    //     $rows = [];
-    //     $grand = 0;
-
-    //     foreach ($this->tokosUser as $t) {
-    //         $isProduksi = ((int) ($t['produksi_sendiri'] ?? 0)) === 1;
-
-    //         $apiId = trim((string) ($t['api_id'] ?? ''));
-    //         $apiName = trim((string) ($t['api_name'] ?? ''));
-    //         $outlet = $t['nmtoko'] ?? '-';
-    //         $tokoId = (int) ($t['id'] ?? 0);
-
-    //         // 1) penjualan (ambil dari hasil batch)
-    //         $neto = 0;
-    //         $hrgApi = 0;
-
-    //         if ($apiId !== '') {
-    //             $data = $penjualanById[$apiId] ?? [];
-
-    //             $col = collect($data)->where('idcabang', $apiId);
-    //             if ($isSingleDate) {
-    //                 $col = $col->where('nhari', $nhariSingle);
-    //             }
-
-    //             $neto = $col->sum(fn($r) => (int) ($r['neto'] ?? 0));
-    //             $hrgApi = $col->sum(fn($r) => (int) ($r['hrg'] ?? 0));
-    //         }
-
-    //         // 2) biaya (ambil dari hasil batch)
-    //         // $colBiaya = collect([]);
-    //         // if ($apiName !== '') {
-    //         //     $biayaRows = $biayaByName[$apiName] ?? [];
-    //         //     $colBiaya = $this->onlyTanggalJikaSingle(collect($biayaRows), $isSingleDate, $start);
-    //         // }
-
-    //         // 3) target proyeksi
-    //         $targetRp = (int) ($mapProyeksi[$tokoId] ?? 0);
-    //         $selisihRp = $hrgApi - $targetRp;
-    //         $selisihPersen = $targetRp > 0 ? round(($selisihRp / $targetRp) * 100, 2) : null;
-
-    //         $kontribusi = (int) round($selisihRp * (1 - $this->hppRatio));
-    //         $grand += $kontribusi;
-
-    //         // 4) disc manual
-    //         // $discRealRp = (int) $colBiaya->filter(fn($r) => strtoupper(trim((string) ($r['tipe'] ?? ''))) === 'DISKON MANUAL')->sum(fn($r) => $this->parseIntMoney($r['totbiaya'] ?? 0));
-    //         $discRealRp  = (int) ($biayaById[$apiId]['disc']  ?? 0); 
-    //         $discTargetRp = $this->targetToRp($targetDisc, $isProduksi, $hrgApi);
-    //         [$discSelisihRp] = $this->selisihTargetReal($discTargetRp, $discRealRp, $hrgApi);
-    //         $discPersenBySales = $this->persenDariRp($discSelisihRp, $hrgApi);
-
-    //         // 5) gas
-    //         // $gasRealRp = $this->sumBiayaByExtracted($colBiaya, 'GAS');
-    //         $gasRealRp   = (int) ($biayaById[$apiId]['gas']   ?? 0);
-    //         $gasTargetRp = $this->targetToRp($targetGas, $isProduksi, $hrgApi);
-    //         [$gasSelisihRp] = $this->selisihTargetReal($gasTargetRp, $gasRealRp, $hrgApi);
-    //         $gasPersenBySales = $this->persenDariRp($gasSelisihRp, $hrgApi);
-
-    //         // 6) telur
-    //         // $telurRealRp = $this->sumBiayaByExtracted($colBiaya, 'TELUR');
-    //         $telurRealRp = (int) ($biayaById[$apiId]['telur'] ?? 0);
-    //         $telurTargetRp = $this->targetToRp($targetTelur, $isProduksi, $hrgApi);
-    //         [$telurSelisihRp] = $this->selisihTargetReal($telurTargetRp, $telurRealRp, $hrgApi);
-    //         $telurPersenBySales = $this->persenDariRp($telurSelisihRp, $hrgApi);
-
-    //         // 7) loss bahan (dari map)
-    //         $lossBahan = (int) ($lossMap[$tokoId] ?? 0);
-
-    //         // 8) retur (mapping pakai apiName kalau ada)
-    //         // 8) RETUR (Realisasi dari API by idcab)
-    //         $returRealRp = 0;
-    //         if ($apiId !== '') {
-    //             $returRealRp = (int) ($returMap[$apiId] ?? 0); // ini REALISASI
-    //         }
-
-    //         // ✅ Target retur dari master target_kontribusis (cek produksi sendiri / tidak)
-    //         $returTargetRp = $this->targetToRp($targetRetur, $isProduksi, $hrgApi);
-
-    //         // ✅ Selisih yang ditampilkan
-    //         [$returSelisihRp, $returSelisihP] = $this->selisihTargetReal($returTargetRp, $returRealRp, $hrgApi);
-    //         $returRp = $returSelisihRp;
-    //         $returPersen = $this->persenDariRp($returRp, $hrgApi);
-
-    //         $tokoDb = $tokoLocal[$tokoId] ?? null;
-
-    //         $areaId = (int) ($tokoDb?->area_id ?? 0);
-    //         $areaLabel = $tokoDb?->area?->nama_area ?: '-';
-    //         $areaPic = $areaId > 0 ? $picAreaByAreaId[$areaId] ?? '' : '';
-    //         $areaLabel = $tokoDb?->area?->nama_area ?: '-';
-    //         // kalau mau wilayah juga:
-    //         // $wilayahLabel = $tokoDb?->area?->wilayah?->nama_wilayah ?: '-';
-    //         $totalKontribusi = (int) $kontribusi + (int) $discSelisihRp + (int) $returSelisihRp + (int) $gasSelisihRp + (int) $telurSelisihRp + (int) $lossBahan;
-
-    //         $rows[] = [
-    //             'area_label' => $areaLabel,
-    //             'area_pic' => $areaPic, // ✅ tambah ini
-    //             'outlet' => $outlet,
-    //             'neto' => $neto,
-
-    //             'selisih_rp' => $selisihRp,
-    //             'selisih_persen' => $selisihPersen,
-
-    //             'kontribusi_rp' => $kontribusi,
-    //             'kontribusi_persen' => null,
-
-    //             'sc_manual_rp' => $discSelisihRp,
-    //             'sc_manual_persen' => $discPersenBySales,
-
-    //             'retur_rp' => $returRp,
-    //             'retur_persen' => $returPersen,
-    //             'gas_rp' => $gasSelisihRp,
-    //             'gas_persen' => $gasPersenBySales,
-
-    //             'telur_rp' => $telurSelisihRp,
-    //             'telur_persen' => $telurPersenBySales,
-
-    //             'loss_bahan' => $lossBahan,
-    //             'total_kontribusi' => $totalKontribusi,
-    //         ];
-    //     }
-
-    //     if ($grand != 0) {
-    //         foreach ($rows as &$r) {
-    //             $r['kontribusi_persen'] = round(((float) ($r['kontribusi_rp'] ?? 0) / (float) $grand) * 100, 2);
-    //         }
-    //         unset($r);
-    //     }
-    //     $rows = collect($rows)
-    //         ->sort(function ($a, $b) {
-    //             $aa = strcasecmp($a['area_label'] ?? '', $b['area_label'] ?? '');
-    //             if ($aa !== 0) {
-    //                 return $aa;
-    //             }
-    //             return strcasecmp($a['outlet'] ?? '', $b['outlet'] ?? '');
-    //         })
-    //         ->values()
-    //         ->all();
-
-    //     $this->totalsByArea = collect($rows)
-    //         ->groupBy(fn($r) => $r['area_label'] ?? '-')
-    //         ->map(function ($g) {
-    //             return [
-    //                 'selisih_rp' => $g->sum(fn($r) => (int) ($r['selisih_rp'] ?? 0)),
-    //                 'kontribusi_rp' => $g->sum(fn($r) => (int) ($r['kontribusi_rp'] ?? 0)),
-    //                 'sc_manual_rp' => $g->sum(fn($r) => (int) ($r['sc_manual_rp'] ?? 0)),
-    //                 'retur_rp' => $g->sum(fn($r) => (int) ($r['retur_rp'] ?? 0)),
-    //                 'gas_rp' => $g->sum(fn($r) => (int) ($r['gas_rp'] ?? 0)),
-    //                 'telur_rp' => $g->sum(fn($r) => (int) ($r['telur_rp'] ?? 0)),
-    //                 'loss_bahan' => $g->sum(fn($r) => (int) ($r['loss_bahan'] ?? 0)),
-    //                 'total_kontribusi' => $g->sum(fn($r) => (int) ($r['total_kontribusi'] ?? 0)),
-    //             ];
-    //         })
-    //         ->toArray();
-
-    //     $this->grandTotals = [
-    //         'selisih_rp' => collect($rows)->sum(fn($r) => (int) ($r['selisih_rp'] ?? 0)),
-    //         'kontribusi_rp' => collect($rows)->sum(fn($r) => (int) ($r['kontribusi_rp'] ?? 0)),
-    //         'sc_manual_rp' => collect($rows)->sum(fn($r) => (int) ($r['sc_manual_rp'] ?? 0)),
-    //         'retur_rp' => collect($rows)->sum(fn($r) => (int) ($r['retur_rp'] ?? 0)),
-    //         'gas_rp' => collect($rows)->sum(fn($r) => (int) ($r['gas_rp'] ?? 0)),
-    //         'telur_rp' => collect($rows)->sum(fn($r) => (int) ($r['telur_rp'] ?? 0)),
-    //         'loss_bahan' => collect($rows)->sum(fn($r) => (int) ($r['loss_bahan'] ?? 0)),
-    //         'total_kontribusi' => collect($rows)->sum(fn($r) => (int) ($r['total_kontribusi'] ?? 0)),
-    //     ];
-
-    //     $this->rowsTarget = $rows;
-    //     $this->sumNetoTarget = $grand;
-    // }
-    public function loadTarget()
+private function aggPayloads(array $payloads): array
 {
-    $this->validate([
-        'tanggalAwal'  => 'required|date',
-        'tanggalAkhir' => 'required|date|after_or_equal:tanggalAwal',
-    ]);
+    $c = collect($payloads);
 
-    $start = Carbon::parse($this->tanggalAwal)->toDateString();
-    $end   = Carbon::parse($this->tanggalAkhir)->toDateString();
+    $sumHrg = (int) $c->sum('hrg');
+    $sumSel = (int) $c->sum('selisih_rp');
+    $baseline = $sumHrg - $sumSel;
 
-    $isSingleDate = $start === $end;
-    $nhariSingle  = $isSingleDate ? Carbon::parse($start)->format('Ymd') : null;
+    $pct = fn(int $num, int $den) => $den > 0 ? round(($num / $den) * 100, 2) : null;
 
-    $mapProyeksi = $this->proyeksiMap($start, $end);
+    $sumDisc  = (int) $c->sum('disc_rp');
+    $sumRetur = (int) $c->sum('retur_rp');
+    $sumGas   = (int) $c->sum('gas_rp');
+    $sumTelur = (int) $c->sum('telur_rp');
 
-    $targets = TargetKontribusi::query()
-        ->where('aktif', 1)
-        ->whereIn('kode', ['DISC_MANUAL', 'GAS', 'TELUR', 'RETUR'])
-        ->get()
-        ->keyBy('kode');
+    return [
+        'hrg' => $sumHrg,
+        'baseline' => $baseline,
 
-    $targetDisc  = $targets->get('DISC_MANUAL');
-    $targetGas   = $targets->get('GAS');
-    $targetTelur = $targets->get('TELUR');
-    $targetRetur = $targets->get('RETUR');
+        'selisih_rp'     => $sumSel,
+        'selisih_persen' => $pct($sumSel, $baseline),
 
-    // ✅ kumpulkan sekali
-    $apiIds  = collect($this->tokosUser)->pluck('api_id')->map(fn($v)=>trim((string)$v))->filter()->unique()->values()->all();
-    $tokoIds = collect($this->tokosUser)->pluck('id')->map(fn($v)=>(int)$v)->filter()->unique()->values()->all();
+        'kontribusi_rp'  => (int) $c->sum('kontribusi_rp'),
 
-    // ✅ toko lokal + area
-    $tokoLocal = \App\Models\MasterToko::query()
-        ->with(['area'])
-        ->whereIn('id', $tokoIds)
-        ->get()
-        ->keyBy('id');
+        'disc_rp'        => $sumDisc,
+        'disc_persen'    => $pct($sumDisc, $sumHrg),
 
-    // ✅ PIC AREA map
-    $picAreaByAreaId = \App\Models\User::query()
-        ->select('name', 'area_id')
-        ->whereNotNull('area_id')
-        ->whereRaw("LOWER(TRIM(role)) = 'area'")
-        ->orderBy('name')
-        ->get()
-        ->groupBy('area_id')
-        ->map(fn($g) => $g->pluck('name')->filter()->implode(', '))
-        ->toArray();
+        'retur_rp'       => $sumRetur,
+        'retur_persen'   => $pct($sumRetur, $sumHrg),
 
-    // ✅ API batch
-    $penjualanById = $this->fetchPenjualanMany($apiIds, $start, $end);
+        'gas_rp'         => $sumGas,
+        'gas_persen'     => $pct($sumGas, $sumHrg),
 
-    // ✅ BIAYA: fetch ALL sekali lalu map by idcab
-    $biayaById = $this->fetchBiayaByIdcabMap($apiIds, $start, $end);
+        'telur_rp'       => $sumTelur,
+        'telur_persen'   => $pct($sumTelur, $sumHrg),
 
-    // ✅ RETUR: fetch all sekali lalu map idcab
-    $returAll = $this->fetchReturAll($start, $end);
-    $returMap = $this->mapReturByIdcab($returAll);
-
-    // ✅ LOSS
-    $lossMap = $this->lossBahanMap($tokoIds, $start, $end);
-
-    $rows  = [];
-    $grand = 0;
-
-    foreach ($this->tokosUser as $t) {
-        $isProduksi = ((int)($t['produksi_sendiri'] ?? 0)) === 1;
-
-        $apiId  = trim((string)($t['api_id'] ?? ''));
-        $outlet = $t['nmtoko'] ?? '-';
-        $tokoId = (int)($t['id'] ?? 0);
-
-        // 1) penjualan
-        $neto   = 0;
-        $hrgApi = 0;
-
-        if ($apiId !== '') {
-            $data = $penjualanById[$apiId] ?? [];
-            $col  = collect($data)->where('idcabang', $apiId);
-            if ($isSingleDate) $col = $col->where('nhari', $nhariSingle);
-
-            $neto   = (int) $col->sum(fn($r) => (int)($r['neto'] ?? 0));
-            $hrgApi = (int) $col->sum(fn($r) => (int)($r['hrg'] ?? 0));
-        }
-
-        // 2) target proyeksi
-        $targetRp      = (int)($mapProyeksi[$tokoId] ?? 0);
-        $selisihRp     = $hrgApi - $targetRp;
-        $selisihPersen = $targetRp > 0 ? round(($selisihRp / $targetRp) * 100, 2) : null;
-
-        $kontribusi = (int) round($selisihRp * (1 - $this->hppRatio));
-        $grand += $kontribusi;
-
-        // 3) biaya real dari map by idcab
-        $discRealRp  = (int)($biayaById[$apiId]['disc']  ?? 0);
-        $gasRealRp   = (int)($biayaById[$apiId]['gas']   ?? 0);
-        $telurRealRp = (int)($biayaById[$apiId]['telur'] ?? 0);
-
-        // 4) selisih vs target
-        $discTargetRp = $this->targetToRp($targetDisc, $isProduksi, $hrgApi);
-        [$discSelisihRp] = $this->selisihTargetReal($discTargetRp, $discRealRp, $hrgApi);
-        $discPersenBySales = $this->persenDariRp($discSelisihRp, $hrgApi);
-
-        $gasTargetRp = $this->targetToRp($targetGas, $isProduksi, $hrgApi);
-        [$gasSelisihRp] = $this->selisihTargetReal($gasTargetRp, $gasRealRp, $hrgApi);
-        $gasPersenBySales = $this->persenDariRp($gasSelisihRp, $hrgApi);
-
-        $telurTargetRp = $this->targetToRp($targetTelur, $isProduksi, $hrgApi);
-        [$telurSelisihRp] = $this->selisihTargetReal($telurTargetRp, $telurRealRp, $hrgApi);
-        $telurPersenBySales = $this->persenDariRp($telurSelisihRp, $hrgApi);
-
-        // 5) loss
-        $lossBahan = (int)($lossMap[$tokoId] ?? 0);
-
-        // 6) retur real by idcab
-        $returRealRp = $apiId !== '' ? (int)($returMap[$apiId] ?? 0) : 0;
-        $returTargetRp = $this->targetToRp($targetRetur, $isProduksi, $hrgApi);
-        [$returSelisihRp] = $this->selisihTargetReal($returTargetRp, $returRealRp, $hrgApi);
-        $returPersen = $this->persenDariRp($returSelisihRp, $hrgApi);
-
-        // 7) area + pic
-        $tokoDb    = $tokoLocal[$tokoId] ?? null;
-        $areaId    = (int)($tokoDb?->area_id ?? 0);
-        $areaLabel = $tokoDb?->area?->nama_area ?: '-';
-        $areaPic   = $areaId > 0 ? ($picAreaByAreaId[$areaId] ?? '') : '';
-
-        $totalKontribusi =
-            (int)$kontribusi
-            + (int)$discSelisihRp
-            + (int)$returSelisihRp
-            + (int)$gasSelisihRp
-            + (int)$telurSelisihRp
-            + (int)$lossBahan;
-
-        $rows[] = [
-            'area_label' => $areaLabel,
-            'area_pic'   => $areaPic,
-            'outlet'     => $outlet,
-            'neto'       => $neto,
-
-            'selisih_rp'     => $selisihRp,
-            'selisih_persen' => $selisihPersen,
-
-            'kontribusi_rp'     => $kontribusi,
-            'kontribusi_persen' => null,
-
-            'sc_manual_rp'     => $discSelisihRp,
-            'sc_manual_persen' => $discPersenBySales,
-
-            'retur_rp'     => $returSelisihRp,
-            'retur_persen' => $returPersen,
-
-            'gas_rp'     => $gasSelisihRp,
-            'gas_persen' => $gasPersenBySales,
-
-            'telur_rp'     => $telurSelisihRp,
-            'telur_persen' => $telurPersenBySales,
-
-            'loss_bahan'       => $lossBahan,
-            'total_kontribusi' => $totalKontribusi,
-        ];
-    }
-
-    if ($grand != 0) {
-        foreach ($rows as &$r) {
-            $r['kontribusi_persen'] = round(((float)($r['kontribusi_rp'] ?? 0) / (float)$grand) * 100, 2);
-        }
-        unset($r);
-    }
-
-    $rows = collect($rows)
-        ->sort(function($a, $b) {
-            $aa = strcasecmp($a['area_label'] ?? '', $b['area_label'] ?? '');
-            if ($aa !== 0) return $aa;
-            return strcasecmp($a['outlet'] ?? '', $b['outlet'] ?? '');
-        })
-        ->values()
-        ->all();
-
-    $this->totalsByArea = collect($rows)
-        ->groupBy(fn($r) => $r['area_label'] ?? '-')
-        ->map(function ($g) {
-            return [
-                'selisih_rp'       => $g->sum(fn($r) => (int)($r['selisih_rp'] ?? 0)),
-                'kontribusi_rp'    => $g->sum(fn($r) => (int)($r['kontribusi_rp'] ?? 0)),
-                'sc_manual_rp'     => $g->sum(fn($r) => (int)($r['sc_manual_rp'] ?? 0)),
-                'retur_rp'         => $g->sum(fn($r) => (int)($r['retur_rp'] ?? 0)),
-                'gas_rp'           => $g->sum(fn($r) => (int)($r['gas_rp'] ?? 0)),
-                'telur_rp'         => $g->sum(fn($r) => (int)($r['telur_rp'] ?? 0)),
-                'loss_bahan'       => $g->sum(fn($r) => (int)($r['loss_bahan'] ?? 0)),
-                'total_kontribusi' => $g->sum(fn($r) => (int)($r['total_kontribusi'] ?? 0)),
-            ];
-        })
-        ->toArray();
-
-    $this->grandTotals = [
-        'selisih_rp'       => collect($rows)->sum(fn($r) => (int)($r['selisih_rp'] ?? 0)),
-        'kontribusi_rp'    => collect($rows)->sum(fn($r) => (int)($r['kontribusi_rp'] ?? 0)),
-        'sc_manual_rp'     => collect($rows)->sum(fn($r) => (int)($r['sc_manual_rp'] ?? 0)),
-        'retur_rp'         => collect($rows)->sum(fn($r) => (int)($r['retur_rp'] ?? 0)),
-        'gas_rp'           => collect($rows)->sum(fn($r) => (int)($r['gas_rp'] ?? 0)),
-        'telur_rp'         => collect($rows)->sum(fn($r) => (int)($r['telur_rp'] ?? 0)),
-        'loss_bahan'       => collect($rows)->sum(fn($r) => (int)($r['loss_bahan'] ?? 0)),
-        'total_kontribusi' => collect($rows)->sum(fn($r) => (int)($r['total_kontribusi'] ?? 0)),
+        'loss_bahan'       => (int) $c->sum('loss_bahan'),
+        'total_kontribusi' => (int) $c->sum('total_kontribusi'),
     ];
-
-    $this->rowsTarget    = $rows;
-    $this->sumNetoTarget = $grand;
 }
 
-    public function resetTarget()
-    {
-        $this->rowsTarget = [];
-        $this->sumNetoTarget = 0;
-        $this->tanggalAwal = now()->toDateString();
-        $this->tanggalAkhir = now()->toDateString();
-    }
 
-    public function render()
+    private function makeResultKey(string $start, string $end, array $tokoIds): string
     {
-        return view('livewire.operasional.kontribusi-target');
+        sort($tokoIds);
+        $userId = (int) Auth::id();
+
+        return 'kontribusi_bulan_lalu:result:v1:' . md5($userId . '|' . $start . '|' . $end . '|' . implode(',', $tokoIds));
+    }
+    private function fetchLossBahanByToko(array $tokoIds, string $start, string $end): array
+    {
+        $tokoIds = array_values(array_unique(array_filter(array_map('intval', $tokoIds))));
+        if (empty($tokoIds)) return [];
+
+        $cacheKey = 'loss_bahan:sum:v1:' . md5(json_encode($tokoIds) . "|$start|$end");
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tokoIds, $start, $end) {
+            return LossBahan::query()
+                ->selectRaw('toko_id, SUM(nominal) as total')
+                ->whereBetween('tanggal', [$start, $end])
+                ->whereIn('toko_id', $tokoIds)
+                ->groupBy('toko_id')
+                ->pluck('total', 'toko_id')
+                ->map(fn($v) => (int) $v)
+                ->toArray();
+        });
+    }
+    public function loadByTarget()
+    {
+        $this->validate([
+            'periodeAwal'  => 'required|date',
+            'periodeAkhir' => 'required|date|after_or_equal:periodeAwal',
+        ]);
+
+
+
+        $start = Carbon::parse($this->periodeAwal)->toDateString();
+        $end   = Carbon::parse($this->periodeAkhir)->toDateString();
+
+        $tokoIdsRaw = collect($this->tokosUser)
+            ->pluck('id')
+            ->map(fn($v) => (int) $v)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($tokoIdsRaw)) {
+            $this->resultKey = null;
+            return;
+        }
+
+        // ✅ FILTER TOKO AKTIF (status = 1)
+        $tokoLocal = MasterToko::query()
+            ->with(['area.wilayah'])
+            ->whereIn('id', $tokoIdsRaw)
+            ->where('status', "1")
+            ->get()
+            ->keyBy('id');
+
+        $tokoIds = $tokoLocal->keys()->map(fn($v) => (int)$v)->values()->all();
+        if (empty($tokoIds)) {
+            $this->resultKey = null;
+            return;
+        }
+
+        $picAreaByAreaId = User::query()
+            ->select('name', 'area_id')
+            ->whereNotNull('area_id')
+            ->whereRaw("LOWER(TRIM(role)) = 'area'")
+            ->orderBy('name')
+            ->get()
+            ->groupBy('area_id')
+            ->map(fn($g) => $g->pluck('name')->filter()->implode(', '))
+            ->toArray();
+
+
+        $dailyByToko = $this->fetchDailyPayloads($tokoIds, $start, $end);
+        $lossByToko  = $this->fetchLossBahanByToko($tokoIds, $start, $end);
+        $rows = [];
+        foreach ($tokoIds as $tokoId) {
+            $tokoDb = $tokoLocal[$tokoId] ?? null;
+            if (!$tokoDb) continue;
+
+            $payloads = $dailyByToko[$tokoId] ?? [];
+            if (empty($payloads)) continue;
+
+            $agg  = $this->aggPayloads($payloads);
+            $loss = (int) ($lossByToko[$tokoId] ?? 0); // ✅ ini yang benar (index = tokoId)
+
+            $areaId = (int)($tokoDb->area_id ?? 0);
+            $areaLabel = $tokoDb->area?->nama_area ?: '-';
+            $areaPic = $areaId > 0 ? ($picAreaByAreaId[$areaId] ?? '') : '';
+
+            $wilayahLabel = $tokoDb->area?->wilayah?->nama_wilayah
+                ?: ($tokoDb->area?->wilayah_id ? 'WILAYAH-' . $tokoDb->area->wilayah_id : '-');
+
+            $rows[] = [
+                'wilayah_label' => $wilayahLabel,
+                'area_label'    => $areaLabel,
+                'area_pic'      => $areaPic,
+                'outlet'        => (string)($tokoDb->nmtoko ?? '-'),
+
+                'selisih_persen' => $agg['selisih_persen'],
+                'selisih_rp'     => $agg['selisih_rp'],
+                'kontribusi_rp'  => $agg['kontribusi_rp'],
+
+                'sc_manual_persen' => $agg['disc_persen'],
+                'sc_manual_rp'     => $agg['disc_rp'],
+
+                'retur_persen' => $agg['retur_persen'],
+                'retur_rp'     => $agg['retur_rp'],
+
+                'gas_persen' => $agg['gas_persen'],
+                'gas_rp'     => $agg['gas_rp'],
+
+                'telur_persen' => $agg['telur_persen'],
+                'telur_rp'     => $agg['telur_rp'],
+
+                // ✅ loss dari tabel loss_bahans
+                'loss_bahan' => $loss,
+
+                // kalau loss itu pengurang, ubah jadi minus
+                'total_kontribusi' => (int)($agg['total_kontribusi'] ?? 0) - $loss,
+            ];
+        }
+
+        $rows = collect($rows)
+            ->sortBy([
+                ['wilayah_label', 'asc'],
+                ['area_label', 'asc'],
+                ['outlet', 'asc'],
+            ])
+            ->values()
+            ->all();
+
+        $avgPct = function (string $key) use ($rows): ?float {
+            $vals = collect($rows)
+                ->map(fn($r) => $this->pctVal($r[$key] ?? null))
+                ->filter(fn($v) => !is_null($v))
+                ->values();
+
+            if ($vals->isEmpty()) return null;
+            return round((float)$vals->avg(), 2);
+        };
+
+        $grandTotals = [
+            'selisih_persen' => $avgPct('selisih_persen'),
+            'selisih_rp' => (int) collect($rows)->sum('selisih_rp'),
+            'kontribusi_rp' => (int) collect($rows)->sum('kontribusi_rp'),
+
+            'sc_manual_persen' => $avgPct('sc_manual_persen'),
+            'sc_manual_rp' => (int) collect($rows)->sum('sc_manual_rp'),
+
+            'retur_persen' => $avgPct('retur_persen'),
+            'retur_rp' => (int) collect($rows)->sum('retur_rp'),
+
+            'gas_persen' => $avgPct('gas_persen'),
+            'gas_rp' => (int) collect($rows)->sum('gas_rp'),
+
+            'telur_persen' => $avgPct('telur_persen'),
+            'telur_rp' => (int) collect($rows)->sum('telur_rp'),
+
+            'loss_bahan' => (int) collect($rows)->sum('loss_bahan'),
+            'total_kontribusi' => (int) collect($rows)->sum('total_kontribusi'),
+        ];
+
+        // ✅ simpan ke cache (anti corrupt data hydrate)
+        $key = $this->makeResultKey($start, $end, $tokoIds);
+
+        Cache::put($key, [
+            'rows'        => $rows,
+            'grandTotals'=> $grandTotals,
+        ], now()->addMinutes(10));
+
+        $this->resultKey = $key;
     }
 }

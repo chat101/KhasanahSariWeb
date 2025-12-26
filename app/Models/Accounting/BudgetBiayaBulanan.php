@@ -10,6 +10,7 @@ class BudgetBiayaBulanan extends Model
     protected $fillable = [
         'toko_id',
         'idakun_api',
+         'deskripsi', // ✅
         'tahun',
         'bulan',
         'budget',

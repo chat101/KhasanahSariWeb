@@ -21,18 +21,7 @@
 
     {{-- Tombol Tambah --}}
     <div class="flex items-center justify-between gap-2">
-        <div class="relative w-1/2">
-            <input wire:model.live="search"
-                class="form-control py-1 pl-8 pr-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none bg-white text-gray-700 text-xs placeholder-gray-400 transition-all duration-300 ease-in-out w-full"
-                type="search" placeholder="Cari nama bahan..." />
-            <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                    class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 4a7 7 0 111-0 7 7 0 01-1 0zm6.293 9.707a9 9 0 111.414-1.414 6 6 0 01-.708-.707l-3-3a9 9 0 011.414 1.414z" />
-                </svg>
-            </span>
-        </div>
+        <div></div>
         <button wire:click="openModal"
             class="flex items-center gap-1 bg-blue-400 hover:bg-blue-500 text-white py-1 px-4 text-xs rounded-lg shadow transition">
             ➕ Tambah
@@ -40,57 +29,74 @@
     </div>
 
 
+    {{-- HEADER --}}
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-3 text-black">
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold flex items-center gap-2">
+                <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 text-xs">SP</span>
+                Master Supplier
+            </h2>
+            <span class="text-[11px] text-gray-500">Kelola master data supplier</span>
+        </div>
+
+        <div class="mt-3 mb-2">
+            <div class="w-1/3">
+                <input wire:model.live="search" class="form-control py-1 pl-8 pr-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari nama bahan..." />
+            </div>
+        </div>
+    </div>
+
     {{-- Tabel Produk --}}
-    <div class="overflow-x-auto bg-gray-100 p-3 rounded-lg shadow">
-        <table class="min-w-full text-left text-gray-800 border border-gray-300 bg-white rounded-lg">
-            <thead class="bg-blue-500 text-white text-xs">
-                <tr>
-                    <th class="px-3 py-2">No</th>
-                    <th class="px-3 py-2">Nama</th>
-                    <th class="px-3 py-2">Telepon</th>
-                    <th class="px-3 py-2">Alamat</th>
-                    <th class="px-3 py-2">Tempo</th>
-                    <th class="px-3 py-2">Limit</th>
-                    <th class="px-3 py-2">Status</th>
-                    <th class="px-3 py-2">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-300">
-                @forelse($produks as $produk)
-                    <tr class="hover:bg-gray-200">
-                        <td class="px-3 py-2 text-xs">
-                            {{ ($produks->currentPage() - 1) * $produks->perPage() + $loop->iteration }}
-                        </td>
-                        <td class="px-3 py-2 text-xs">{{ $produk->nmsupp }}</td>
-                        <td class="px-3 py-2 text-xs">{{ $produk->telpsupp }}</td>
-                        <td class="px-3 py-2 text-xs">{{ $produk->suppalamat }}</td>
-                        <td class="px-3 py-2 text-xs">
-                            {{ $produk->tempo_hari ? 'Net ' . $produk->tempo_hari . ' hari' : 'Cash' }}
-                        </td>
-                        <td class="px-3 py-2 text-xs">
-                            {{ $produk->max_hutang ? number_format($produk->max_hutang, 0, ',', '.') : '-' }}
-                        </td>
-                        <td class="px-3 py-2 text-xs">
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px]
-                            {{ $produk->is_aktif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
-                                {{ $produk->is_aktif ? 'Aktif' : 'Nonaktif' }}
-                            </span>
-                        </td>
-                        <td class="px-3 py-2 flex gap-1 text-xs">
-                            <button wire:click="edit({{ $produk->id }})"
-                                class="bg-yellow-400 hover:bg-yellow-500 px-2 py-1 rounded-lg text-white text-xs">✎</button>
-                            <button wire:click="delete({{ $produk->id }})"
-                                class="bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg text-white text-xs">🗑</button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" class="text-center text-gray-500 py-3">Tidak ada data</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr class="text-left">
+            <th class="px-4 py-3 font-semibold text-gray-700">No</th>
+            <th class="px-4 py-3 font-semibold text-gray-700">Nama</th>
+            <th class="px-4 py-3 font-semibold text-gray-700">Telepon</th>
+            <th class="px-4 py-3 font-semibold text-gray-700">Alamat</th>
+            <th class="px-4 py-3 font-semibold text-gray-700">Tempo</th>
+            <th class="px-4 py-3 font-semibold text-gray-700">Limit</th>
+            <th class="px-4 py-3 font-semibold text-gray-700">Status</th>
+            <th class="px-4 py-3 font-semibold text-gray-700">Aksi</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @forelse($produks as $produk)
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3">{{ ($produks->currentPage() - 1) * $produks->perPage() + $loop->iteration }}</td>
+              <td class="px-4 py-3 truncate">{{ $produk->nmsupp }}</td>
+              <td class="px-4 py-3 truncate">{{ $produk->telpsupp }}</td>
+              <td class="px-4 py-3 truncate">{{ $produk->suppalamat }}</td>
+              <td class="px-4 py-3">{{ $produk->tempo_hari ? 'Net ' . $produk->tempo_hari . ' hari' : 'Cash' }}</td>
+              <td class="px-4 py-3">{{ $produk->max_hutang ? number_format($produk->max_hutang, 0, ',', '.') : '-' }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs {{ $produk->is_aktif ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">{{ $produk->is_aktif ? 'Aktif' : 'Nonaktif' }}</span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <button wire:click="edit({{ $produk->id }})" aria-label="Edit {{ $produk->id }}" title="Edit" class="p-2 rounded-md hover:bg-gray-50 text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+
+                  <button wire:click="delete({{ $produk->id }})" aria-label="Hapus {{ $produk->id }}" title="Hapus" class="p-2 rounded-md hover:bg-red-50 text-red-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          @empty
+            <tr>
+              <td colspan="8" class="text-center py-6 text-gray-500">Tidak ada data</td>
+            </tr>
+          @endforelse
+        </tbody>
+      </table>
     </div>
 
     {{-- Pagination --}}

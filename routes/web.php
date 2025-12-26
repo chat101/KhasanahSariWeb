@@ -80,6 +80,7 @@ use App\Livewire\Accounting\Transaction\Create as TxCreate;
 use App\Livewire\Master\UploadProyeksi;
 use App\Livewire\Operasional\Area as OperasionalArea;
 use App\Livewire\Operasional\InputLossBahan;
+use App\Livewire\Operasional\KontribusiHarianToko;
 use App\Livewire\Operasional\LaporanKontribusi;
 use App\Livewire\Operasional\MasterTrendInflasi\Index;
 use App\Livewire\Operasional\Sisasales;
@@ -166,6 +167,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('upload-proyeksi', UploadProyeksi::class)->name('upload-proyeksi');
         Route::get('/master-trend-inflasi', Index::class)->name('master.trend-inflasi');
         Route::get('/loss-bahan', InputLossBahan::class)->name('loss-bahan');
+        Route::get('/kontribusi-harian-toko', KontribusiHarianToko::class)->name('kontribusi-harian-toko');
     });
 
 

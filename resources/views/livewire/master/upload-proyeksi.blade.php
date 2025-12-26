@@ -96,8 +96,31 @@
         @endif
     </div>
 
+    {{-- Integrated Toolbar --}}
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-1">
+        <div class="flex items-center gap-2 w-full md:w-1/2">
+            <div class="relative w-full">
+                <input wire:model.live="search" class="py-1 pl-8 pr-8 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari batch / toko..." />
+                <span class="absolute left-2 top-1.5 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" /></svg>
+                </span>
+                @if($search)
+                <button wire:click="$set('search','')" class="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600" title="Clear">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                @endif
+            </div>
+        </div>
+        <div class="flex items-center gap-2 justify-end w-full md:w-auto">
+            <button wire:click="import"
+                class="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-4 text-xs rounded-lg shadow transition">
+                ⬆️ Import
+            </button>
+        </div>
+    </div>
+
     {{-- CARD: TABEL BATCH TERAKHIR --}}
-    <div class="bg-white rounded-lg shadow border border-gray-200 overflow-x-auto">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <div class="text-sm font-semibold text-gray-700">
                 Batch Terakhir: <span class="font-mono text-[12px]">{{ $lastBatchId ?? '-' }}</span>
@@ -118,6 +141,7 @@
         </div>
 
         @if($lastBatchId && $pivot && count($pivot) > 0)
+            <div class="overflow-x-auto">
             <table class="min-w-max w-full text-xs text-gray-700">
                 <thead class="text-[11px] uppercase text-gray-600">
                     <tr class="border-b">
@@ -142,23 +166,21 @@
                     @foreach($pivot as $toko => $rows)
                         <tr class="hover:bg-gray-50">
                             <td class="px-3 py-2 border-r">{{ $loop->iteration }}</td>
-                            <td class="px-3 py-2 border-r font-medium">{{ $toko }}</td>
+                            <td class="px-3 py-2 border-r font-medium truncate">{{ $toko }}</td>
 
                             @foreach($dates as $tgl)
-                                <td class="px-3 py-2 border-r text-right">
-                                    {{ $rows[$tgl]['qty'] ?? '-' }}
-                                </td>
-                                <td class="px-3 py-2 border-r text-right">
-                                    {{ isset($rows[$tgl]) ? number_format($rows[$tgl]['rupiah'],0,',','.') : '-' }}
-                                </td>
+                                <td class="px-3 py-2 border-r text-right">{{ $rows[$tgl]['qty'] ?? '-' }}</td>
+                                <td class="px-3 py-2 border-r text-right">{{ isset($rows[$tgl]) ? number_format($rows[$tgl]['rupiah'],0,',','.') : '-' }}</td>
                             @endforeach
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+            </div>
         @else
-            <div class="px-4 py-8 text-center text-xs text-gray-500">
-                Belum ada data proyeksi yang pernah diimport.
+            <div class="px-4 py-8 text-center text-sm text-gray-500">
+                <div class="text-lg font-medium">Belum ada data proyeksi</div>
+                <div class="text-xs mt-2">Silakan import file proyeksi untuk menambah data.</div>
             </div>
         @endif
     </div>

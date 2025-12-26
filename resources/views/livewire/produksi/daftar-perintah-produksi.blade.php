@@ -72,18 +72,24 @@
                                     </a>
                                 @else
                                     {{-- Tombol umum untuk role selain Leader Produksi --}}
-                                    @if (empty($perintah->status))
-                                        <button type="button" wire:click="openEditModal({{ $perintah->id }})"
-                                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm shadow"
-                                            aria-label="Tambah produksi">
-                                            Pengurangan Giling
-                                        </button>
+                                 @if (empty($perintah->status))
 
-                                        <a href="{{ route('hasdist', ['perintah_id' => $perintah->id]) }}"
-                                            class="inline-flex items-center px-3 py-1.5 rounded bg-amber-400 hover:bg-amber-500 text-gray-900 text-xs font-medium shadow transition">
-                                            Input Hasil
-                                        </a>
-                                    @endif
+    {{-- Pengurangan Giling: hanya untuk anggun@gmail.com --}}
+    @if (auth()->check() && auth()->user()->email === 'anggun@gmail.com')
+        <button type="button" wire:click="openEditModal({{ $perintah->id }})"
+            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm shadow"
+            aria-label="Tambah produksi">
+            Pengurangan Giling
+        </button>
+    @endif
+
+    {{-- Tombol lain tetap tampil seperti biasa --}}
+    <a href="{{ route('hasdist', ['perintah_id' => $perintah->id]) }}"
+        class="inline-flex items-center px-3 py-1.5 rounded bg-amber-400 hover:bg-amber-500 text-gray-900 text-xs font-medium shadow transition">
+        Input Hasil
+    </a>
+
+@endif
 
                                     <button wire:click="confirmSelesai({{ $perintah->id }})" wire:loading.attr="disabled"
                                         class="inline-flex items-center px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium shadow transition">

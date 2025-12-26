@@ -14,6 +14,7 @@ class BudgetBiaya extends Model
         'idakun_api',
         'tipe_api',
         'ket_api',
+        'deskripsi', // ✅
         'start_date',
         'end_date',
         'budget',

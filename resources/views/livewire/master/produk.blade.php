@@ -15,91 +15,108 @@
             </div>
         @endif
 
-        {{-- Search Box --}}
-        <div class="flex items-center justify-between gap-2">
-            <div class="relative w-1/2">
-                <input wire:model.live="search"
-                    class="form-control py-1 pl-8 pr-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 focus:outline-none bg-white text-gray-700 text-xs placeholder-gray-400 transition-all duration-300 ease-in-out w-full"
-                    type="search" placeholder="Cari nama bahan..." />
-                <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M11 4a7 7 0 111-0 7 7 0 01-1 0zm6.293 9.707a9 9 0 111.414-1.414 6 6 0 01-.708-.707l-3-3a9 9 0 011.414 1.414z" />
-                    </svg>
-                </span>
+        {{-- Integrated Toolbar --}}
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-1">
+            <div class="flex items-center gap-2 w-full md:w-1/2">
+                <div class="relative w-full">
+                    <input wire:model.live="search" class="py-1 pl-8 pr-8 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari nama bahan..." />
+                    <span class="absolute left-2 top-1.5 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" /></svg>
+                    </span>
+                    @if($search)
+                    <button wire:click="$set('search','')" class="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600" title="Clear">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    @endif
+                </div>
             </div>
-            <button wire:click="openModal"
-                class="flex items-center gap-1 bg-blue-400 hover:bg-blue-500 text-white py-1 px-4 text-xs rounded-lg shadow transition">
-                ➕ Tambah
-            </button>
+            <div class="flex items-center gap-2 justify-end w-full md:w-auto">
+                <button wire:click="openModal"
+                    class="flex items-center gap-1 bg-blue-400 hover:bg-blue-500 text-white py-1 px-4 text-xs rounded-lg shadow transition">
+                    ➕ Tambah
+                </button>
+            </div>
+        </div>
+
+        {{-- HEADER --}}
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-3 text-black">
+            <div class="flex items-center justify-between gap-2">
+                <h2 class="text-sm font-semibold flex items-center gap-2">
+                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 text-xs">PR</span>
+                    Master Produk
+                </h2>
+                <span class="text-[11px] text-gray-500">Kelola master produk</span>
+            </div>
+
+            <div class="mt-3 mb-2">
+                <div class="w-1/3">
+                    <input wire:model.live="search" class="form-control py-1 pl-8 pr-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari nama bahan..." />
+                </div>
+            </div>
         </div>
 
         {{-- Product Table --}}
-        <div class="overflow-x-auto bg-white p-2 rounded-lg shadow-lg">
-            <table class="min-w-full text-left text-gray-600 border border-gray-300 bg-gray-50 rounded-lg text-xs">
-                <thead class="bg-blue-300 text-gray-800">
-                    <tr>
-                        <th class="px-2 py-2">No</th>
-                        <th class="px-2 py-2">Id</th>
-                        <th class="px-2 py-2">Id Barang</th>
-                        <th class="px-2 py-2">Nama Barang</th>
-                        <th class="px-2 py-2">Jenis</th>
-                        <th class="px-2 py-2">Hpp</th>
-
-                        <th class="px-2 py-2">Patokan Resep</th>
-                        <th class="px-2 py-2">Metode</th>
-                        <th class="px-2 py-2">Dekor</th>
-                        <th class="px-2 py-2">Divisi</th>
-
-                        <th class="px-2 py-2">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    @forelse($produks as $produk)
-                        <tr class="hover:bg-gray-100 transition">
-                            <td class="px-2 py-2">
-                                {{ ($produks->currentPage() - 1) * $produks->perPage() + $loop->iteration }}
-                            </td>
-                            <td class="px-2 py-2">{{ $produk->id }}</td>
-                            <td class="px-2 py-2">{{ $produk->produk_id }}</td>
-                            <td class="px-2 py-2">{{ $produk->nama }}</td>
-                            <td class="px-2 py-2">{{ $produk->jenis }}</td>
-                            <td class="px-2 py-2"> Rp.{{ number_format($produk->hpp_produk, 2, ',', '.') }}</td>
-                            <td class="px-2 py-2">{{ $produk->patokan }}</td>
-                            <td class="px-2 py-2">{{ $produk->metode }}</td>
-                            <td class="px-2 py-2">{{ $produk->dekor }}</td>
-                            <td>
-                                <ul class="list-disc list-inside text-xs">
-                                    @forelse ($produk->jobs as $j)
-                                        @if ($j->job)  {{-- skip if the related job is missing --}}
-                                            <li>{{ $j->job->nama_job }}</li>
-                                        @endif
-                                    @empty
-                                        <li class="italic text-gray-400">Belum ada job</li>
-                                    @endforelse
-                                </ul>
-                            </td>
-                            <td class="px-2 py-2 flex gap-1">
-                                <button wire:click="edit({{ $produk->id }})"
-                                    class="bg-yellow-300 hover:bg-yellow-400 px-2 py-1 rounded-lg text-gray-800 text-xs shadow transition">
-                                    ✎
-                                </button>
-                                <div class="ml-auto">
-                                    <button wire:click="editJob({{ $produk->id }})"
-                                        class="bg-green-300 hover:bg-green-400 px-2 py-1 rounded-lg text-gray-800 text-xs shadow transition">
-                                        + Bagian
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-gray-500 py-2">Tidak ada data</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr class="text-left">
+                <th class="px-4 py-3 font-semibold text-gray-700">No</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Id</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Id Barang</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Nama Barang</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Jenis</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Hpp</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Patokan</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Metode</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Dekor</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Divisi</th>
+                <th class="px-4 py-3 font-semibold text-gray-700">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              @forelse($produks as $produk)
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3">{{ ($produks->currentPage() - 1) * $produks->perPage() + $loop->iteration }}</td>
+                  <td class="px-4 py-3">{{ $produk->id }}</td>
+                  <td class="px-4 py-3">{{ $produk->produk_id }}</td>
+                  <td class="px-4 py-3 truncate">{{ $produk->nama }}</td>
+                  <td class="px-4 py-3">{{ $produk->jenis }}</td>
+                  <td class="px-4 py-3">Rp.{{ number_format($produk->hpp_produk, 2, ',', '.') }}</td>
+                  <td class="px-4 py-3">{{ $produk->patokan }}</td>
+                  <td class="px-4 py-3">{{ $produk->metode }}</td>
+                  <td class="px-4 py-3">{{ $produk->dekor }}</td>
+                  <td class="px-4 py-3">
+                    <ul class="list-disc list-inside text-xs">
+                      @forelse ($produk->jobs as $j)
+                        @if ($j->job)
+                          <li>{{ $j->job->nama_job }}</li>
+                        @endif
+                      @empty
+                        <li class="italic text-gray-400">Belum ada job</li>
+                      @endforelse
+                    </ul>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <button wire:click="edit({{ $produk->id }})" aria-label="Edit {{ $produk->id }}" title="Edit" class="p-2 rounded-md hover:bg-gray-50 text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <div class="ml-auto">
+                        <button wire:click="editJob({{ $produk->id }})" class="p-2 rounded-md hover:bg-gray-50 text-green-600" title="Tambah Bagian">+</button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              @empty
+                <tr>
+                  <td colspan="11" class="text-center py-6 text-gray-500">Tidak ada data</td>
+                </tr>
+              @endforelse
+            </tbody>
+          </table>
         </div>
 
         {{-- Pagination --}}

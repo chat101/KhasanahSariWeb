@@ -127,16 +127,27 @@
                 <flux:navlist.group expandable
                     :expanded="request()->routeIs('dashboard') || request()->routeIs('dashboard')" heading="OPERASIONAL"
                     class="grid">
+                    @menuitem('operasional', 'loss-bahan')
                     <flux:navlist.item icon="home" :href="route('loss-bahan')"
                     :current="request()->routeIs('loss-bahan')" wire:navigate
                     class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                     {{ __('Input Loss Bahan') }}
                 </flux:navlist.item>
+                @endmenuitem
+                @menuitem('operasional', 'sisa-sales')
                     <flux:navlist.item icon="home" :href="route('sisa-sales')"
                         :current="request()->routeIs('sisa-sales')" wire:navigate
                         class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
                         {{ __('Laporan Kontribusi') }}
                     </flux:navlist.item>
+                @endmenuitem
+                @menuitem('operasional', 'kontribusi-harian-toko')
+                    <flux:navlist.item icon="home" :href="route('kontribusi-harian-toko')"
+                    :current="request()->routeIs('kontribusi-harian-toko')" wire:navigate
+                    class="hover:bg-zinc-200 dark:hover:bg-zinc-700 transition rounded-md">
+                    {{ __('KONTRIBUSI HARIAN TOKO') }}
+                </flux:navlist.item>
+                @endmenuitem
                 </flux:navlist.group>
             @endmenugroup
             @menugroup('Purchasing')
