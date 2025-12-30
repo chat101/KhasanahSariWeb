@@ -140,6 +140,7 @@ class SnapshotKontribusiHarianToko extends Command
                         'telur_rp' => (int) ($r['telur_rp'] ?? 0),
 
                         'loss_bahan' => (int) ($r['loss_bahan'] ?? 0),
+                        'kurang_setoran' => (int) ($r['kurang_setoran'] ?? 0),
                         'total_kontribusi' => (int) ($r['total_kontribusi'] ?? 0),
 
                         'payload' => $r,

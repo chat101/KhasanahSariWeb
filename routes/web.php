@@ -86,6 +86,7 @@ use App\Livewire\Operasional\MasterTrendInflasi\Index;
 use App\Livewire\Operasional\Sisasales;
 use App\Livewire\Operasional\TargetKontribusi;
 use App\Livewire\Operasional\Wilayah as OperasionalWilayah;
+use App\Livewire\Operasional\KurangSetoran;
 
 Route::middleware(['auth']) // jika perlu
     ->get('/admin/slides', \App\Livewire\Slides\Manage::class)
@@ -108,6 +109,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/profile', Profile::class)->name('settings.profile');
     Route::get('settings/password', Password::class)->name('settings.password');
     Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
+
     // Route master
     Route::get('mtoko', Toko::class)->name('mtoko');
     Route::get('msupplier', Supplier::class)->name('msupplier');
@@ -159,16 +161,28 @@ Route::middleware(['auth'])->group(function () {
 
 
        // Route Operasional
-       Route::middleware(['auth'])->group(function () {
         // Route::get('/sisa-sales', Sisasales::class)->name('sisa-sales');
-        Route::get('/sisa-sales', LaporanKontribusi::class)->name('sisa-sales');
+        Route::get('/sisa-sales', LaporanKontribusi::class)->name('sisa-sales');        
+        // Download kontribusi harian area (POST route, hindari Livewire hydration)
+        Route::post('/kontribusi-area-download', function (\Illuminate\Http\Request $request) {
+            $tanggalAwal = $request->input('tanggalAwal');
+            $tanggalAkhir = $request->input('tanggalAkhir');
+            $tokosUser = json_decode($request->input('tokosUser', '[]'), true);
+
+            $component = new \App\Livewire\Operasional\KontribusiHarianArea();
+            $component->tanggalAwal = $tanggalAwal;
+            $component->tanggalAkhir = $tanggalAkhir;
+            $component->tokosUser = $tokosUser;
+
+            return $component->download();
+        })->name('kontribusi-area.download');
 
         Route::get('master-target-kontribusi', TargetKontribusi::class)->name('master-target-kontribusi');
         Route::get('upload-proyeksi', UploadProyeksi::class)->name('upload-proyeksi');
         Route::get('/master-trend-inflasi', Index::class)->name('master.trend-inflasi');
         Route::get('/loss-bahan', InputLossBahan::class)->name('loss-bahan');
         Route::get('/kontribusi-harian-toko', KontribusiHarianToko::class)->name('kontribusi-harian-toko');
-    });
+        Route::get('/kurang-setoran', KurangSetoran::class)->name('kurang-setoran');
 
 
     // Route Accounting
@@ -241,7 +255,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', Dashboard::class)->name('dashboard');
+   Route::get('/dashboard', \App\Livewire\Dashboard::class)->name('dashboard');
 });
 
 require __DIR__ . '/auth.php';

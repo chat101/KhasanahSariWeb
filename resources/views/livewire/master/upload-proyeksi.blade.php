@@ -100,15 +100,15 @@
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-1">
         <div class="flex items-center gap-2 w-full md:w-1/2">
             <div class="relative w-full">
-                <input wire:model.live="search" class="py-1 pl-8 pr-8 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari batch / toko..." />
-                <span class="absolute left-2 top-1.5 text-gray-400">
+                {{-- <input wire:model.live="search" class="py-1 pl-8 pr-8 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari batch / toko..." /> --}}
+                {{-- <span class="absolute left-2 top-1.5 text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" /></svg>
-                </span>
-                @if($search)
+                </span> --}}
+                {{-- @if($search)
                 <button wire:click="$set('search','')" class="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600" title="Clear">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
-                @endif
+                @endif --}}
             </div>
         </div>
         <div class="flex items-center gap-2 justify-end w-full md:w-auto">
@@ -120,7 +120,8 @@
     </div>
 
     {{-- CARD: TABEL BATCH TERAKHIR --}}
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg ring-1 ring-gray-100 overflow-hidden">
+        <div class="h-1 bg-gradient-to-r from-indigo-500 to-emerald-400"></div>
         <div class="px-4 py-3 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <div class="text-sm font-semibold text-gray-700">
                 Batch Terakhir: <span class="font-mono text-[12px]">{{ $lastBatchId ?? '-' }}</span>
@@ -143,7 +144,7 @@
         @if($lastBatchId && $pivot && count($pivot) > 0)
             <div class="overflow-x-auto">
             <table class="min-w-max w-full text-xs text-gray-700">
-                <thead class="text-[11px] uppercase text-gray-600">
+                <thead class="text-[11px] uppercase text-gray-600 bg-white">
                     <tr class="border-b">
                         <th rowspan="2" class="px-3 py-2 bg-gray-50 border-r text-left">No</th>
                         <th rowspan="2" class="px-3 py-2 bg-gray-50 border-r text-left">Toko</th>
@@ -153,18 +154,34 @@
                                 {{ $tgl }}
                             </th>
                         @endforeach
+
+                        <th colspan="2" class="px-3 py-2 text-center bg-blue-200 border-r border-blue-300">
+                            Total
+                        </th>
                     </tr>
                     <tr class="border-b">
                         @foreach($dates as $tgl)
                             <th class="px-3 py-2 text-center bg-amber-100 border-r border-amber-200">Qty</th>
                             <th class="px-3 py-2 text-center bg-amber-100 border-r border-amber-200">Rp</th>
                         @endforeach
+                        <th class="px-3 py-2 text-center bg-blue-100 border-r border-blue-200">Qty</th>
+                        <th class="px-3 py-2 text-center bg-blue-100 border-r border-blue-200">Rp</th>
                     </tr>
                 </thead>
 
                 <tbody class="divide-y divide-gray-100">
                     @foreach($pivot as $toko => $rows)
-                        <tr class="hover:bg-gray-50">
+                        @php
+                            $totalQty = 0;
+                            $totalRp = 0;
+                            foreach($dates as $tgl) {
+                                if(isset($rows[$tgl])) {
+                                    $totalQty += (int)($rows[$tgl]['qty'] ?? 0);
+                                    $totalRp += (int)($rows[$tgl]['rupiah'] ?? 0);
+                                }
+                            }
+                        @endphp
+                        <tr class="transform transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm">
                             <td class="px-3 py-2 border-r">{{ $loop->iteration }}</td>
                             <td class="px-3 py-2 border-r font-medium truncate">{{ $toko }}</td>
 
@@ -172,8 +189,42 @@
                                 <td class="px-3 py-2 border-r text-right">{{ $rows[$tgl]['qty'] ?? '-' }}</td>
                                 <td class="px-3 py-2 border-r text-right">{{ isset($rows[$tgl]) ? number_format($rows[$tgl]['rupiah'],0,',','.') : '-' }}</td>
                             @endforeach
+
+                            <td class="px-3 py-2 border-r text-right font-semibold bg-blue-50">{{ $totalQty }}</td>
+                            <td class="px-3 py-2 border-r text-right font-semibold bg-blue-50">{{ number_format($totalRp, 0, ',', '.') }}</td>
                         </tr>
                     @endforeach
+
+                    {{-- TOTAL ROW --}}
+                    @php
+                        $colTotals = [];
+                        foreach($dates as $tgl) {
+                            $colTotals[$tgl] = ['qty' => 0, 'rp' => 0];
+                            foreach($pivot as $toko => $rows) {
+                                if(isset($rows[$tgl])) {
+                                    $colTotals[$tgl]['qty'] += (int)($rows[$tgl]['qty'] ?? 0);
+                                    $colTotals[$tgl]['rp'] += (int)($rows[$tgl]['rupiah'] ?? 0);
+                                }
+                            }
+                        }
+                        $grandTotalQty = 0;
+                        $grandTotalRp = 0;
+                        foreach($colTotals as $tgl => $col) {
+                            $grandTotalQty += $col['qty'];
+                            $grandTotalRp += $col['rp'];
+                        }
+                    @endphp
+                    <tr class="bg-gray-100 font-semibold border-t-2 border-gray-300">
+                        <td colspan="2" class="px-3 py-2 border-r text-right">TOTAL</td>
+
+                        @foreach($dates as $tgl)
+                            <td class="px-3 py-2 border-r text-right bg-amber-100">{{ $colTotals[$tgl]['qty'] }}</td>
+                            <td class="px-3 py-2 border-r text-right bg-amber-100">{{ number_format($colTotals[$tgl]['rp'], 0, ',', '.') }}</td>
+                        @endforeach
+
+                        <td class="px-3 py-2 border-r text-right bg-blue-100">{{ $grandTotalQty }}</td>
+                        <td class="px-3 py-2 border-r text-right bg-blue-100">{{ number_format($grandTotalRp, 0, ',', '.') }}</td>
+                    </tr>
                 </tbody>
             </table>
             </div>

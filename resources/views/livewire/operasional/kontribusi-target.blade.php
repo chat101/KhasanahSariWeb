@@ -114,6 +114,7 @@
                 'telur_rp'         => $sumInt('telur_rp'),
 
                 'loss_bahan'       => $sumInt('loss_bahan'),
+                'kurang_setoran'   => $sumInt('kurang_setoran'),
                 'total_kontribusi' => $sumInt('total_kontribusi'),
             ];
         };
@@ -149,6 +150,7 @@
                     <th colspan="2" class="px-3 py-2 text-center bg-gray-50 border-r">Gas</th>
                     <th colspan="2" class="px-3 py-2 text-center bg-gray-50 border-r">Telur</th>
                     <th rowspan="2" class="px-3 py-2 text-center bg-gray-50 border-r">Loss bahan</th>
+                    <th rowspan="2" class="px-3 py-2 text-center bg-red-50 border-r border-red-200 text-red-700">Kurang Setoran</th>
                     <th rowspan="2" class="px-3 py-2 text-center bg-gray-50">Total kontribusi</th>
                 </tr>
 
@@ -197,6 +199,7 @@
                                 $telR = (int)($r['telur_rp'] ?? 0);
 
                                 $loss = (int)($r['loss_bahan'] ?? 0);
+                                $ks   = (int)($r['kurang_setoran'] ?? 0);
                                 $tk   = (int)($r['total_kontribusi'] ?? 0);
                             @endphp
 
@@ -258,7 +261,13 @@
                                 </td>
 
                                 <td class="px-3 py-2 border-r text-right font-semibold {{ $clsRp($loss) }}">
-                                    {{ $loss === 0 ? '-' : $fmtRp($loss) }}
+                                    <button type="button" class="underline decoration-dashed underline-offset-4" wire:click="openLossModal('{{ addslashes($r['outlet'] ?? '') }}', '{{ $periodeAwal }}', '{{ $periodeAkhir }}', {{ $loss }}, {{ $r['toko_id'] ?? 0 }})">
+                                        {{ $loss === 0 ? '-' : $fmtRp($loss) }}
+                                    </button>
+                                </td>
+
+                                <td class="px-3 py-2 border-r text-right font-semibold text-red-600">
+                                    {{ $ks === 0 ? '-' : ('-' . $fmtRp($ks)) }}
                                 </td>
 
                                 <td class="px-3 py-2 text-right font-semibold {{ $clsRp($tk) }}">
@@ -329,6 +338,10 @@
 
                             <td class="px-3 py-2 border-r text-right font-semibold {{ $clsRp($t['loss_bahan'] ?? 0) }}">
                                 {{ (int)($t['loss_bahan'] ?? 0) === 0 ? '-' : $fmtRp((int)$t['loss_bahan']) }}
+                            </td>
+
+                            <td class="px-3 py-2 border-r text-right font-semibold text-red-700">
+                                {{ (int)($t['kurang_setoran'] ?? 0) === 0 ? '-' : ('-' . $fmtRp((int)$t['kurang_setoran'])) }}
                             </td>
 
                             <td class="px-3 py-2 text-right font-semibold {{ $clsRp($t['total_kontribusi'] ?? 0) }}">
@@ -407,6 +420,10 @@
                         {{ (int)($gt['loss_bahan'] ?? 0) === 0 ? '-' : $fmtRp((int)$gt['loss_bahan']) }}
                     </td>
 
+                    <td class="px-3 py-3 border-r text-right font-semibold text-red-700">
+                        {{ (int)($gt['kurang_setoran'] ?? 0) === 0 ? '-' : ('-' . $fmtRp((int)$gt['kurang_setoran'])) }}
+                    </td>
+
                     <td class="px-3 py-3 text-right font-semibold {{ $clsRp($gt['total_kontribusi'] ?? 0) }}">
                         {{ (int)($gt['total_kontribusi'] ?? 0) === 0 ? '-' : $fmtRp((int)$gt['total_kontribusi']) }}
                     </td>
@@ -414,4 +431,64 @@
             </tfoot>
         </table>
     </div>
+
+    {{-- Loss Bahan Modal --}}
+    @if($showLossModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click="closeLossModal">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" wire:click.stop>
+            <div class="px-6 py-4 border-b flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Detail Loss Bahan</h3>
+                    <p class="text-sm text-gray-600 mt-1">
+                        <strong>{{ $lossModalOutlet }}</strong>
+                        @if($lossModalTanggal && $lossModalTanggalAkhir)
+                            · {{ \Carbon\Carbon::parse($lossModalTanggal)->format('d M Y') }}
+                            @if($lossModalTanggal !== $lossModalTanggalAkhir)
+                                s.d. {{ \Carbon\Carbon::parse($lossModalTanggalAkhir)->format('d M Y') }}
+                            @endif
+                        @endif
+                    </p>
+                </div>
+                <button type="button" wire:click="closeLossModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                @if(empty($lossModalItems))
+                    <div class="text-center py-8 text-gray-500">
+                        Tidak ada data loss bahan untuk periode ini
+                    </div>
+                @else
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-2 text-left font-semibold text-gray-700">Barang</th>
+                                <th class="px-4 py-2 text-right font-semibold text-gray-700">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @foreach($lossModalItems as $item)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-2 text-gray-900">{{ $item['barang'] ?? '-' }}</td>
+                                <td class="px-4 py-2 text-right">
+                                    <span class="font-semibold text-gray-900">{{ number_format($item['qty'] ?? 0, 0, ',', '.') }}</span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+
+            <div class="px-6 py-4 border-t bg-gray-50 flex justify-end">
+                <button type="button" wire:click="closeLossModal" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>

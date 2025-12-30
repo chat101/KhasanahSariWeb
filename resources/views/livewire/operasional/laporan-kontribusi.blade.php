@@ -43,6 +43,16 @@
                     ])>
                 Detail Harian Area
             </button>
+
+            <button type="button"
+                    wire:click="setTab('dailywilayah')"
+                    @class([
+                        'px-3 py-1.5 rounded-lg border transition-colors',
+                        'bg-indigo-600 text-white border-indigo-600' => $tab === 'dailywilayah',
+                        'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200' => $tab !== 'dailywilayah',
+                    ])>
+                Detail Harian Wilayah
+            </button>
         </div>
     </div>
 
@@ -56,6 +66,10 @@
             <livewire:operasional.kontribusi-bulan-lalu
                 :tokos-user="$tokosUser"
                 :key="'kontribusi-bulanlalu'" />
+        @elseif ($tab === 'dailywilayah')
+            <livewire:operasional.kontribusi-harian-wilayah
+                :tokos-user="$tokosUser"
+                :key="'kontribusi-dailywilayah'" />
         @else
             <livewire:operasional.kontribusi-harian-area
                 :tokos-user="$tokosUser"

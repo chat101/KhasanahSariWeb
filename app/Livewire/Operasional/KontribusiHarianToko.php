@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Livewire\Component;
 use App\Models\MasterToko;
 use App\Models\Operasional\LossBahan;
+use App\Models\Operasional\KurangSetoran;
 use App\Models\Operasional\MasterProyeksiKontribusi;
 use App\Models\Operasional\MasterTrendInflasi;
 use App\Models\Operasional\TargetKontribusi;
@@ -40,6 +41,14 @@ class KontribusiHarianToko extends Component
     public array $metaByTanggal = []; // ['2025-12-01'=>'SNAPSHOT', ...]
     public ?string $loadDuration = null;
 
+    // Loss Bahan Modal state
+    public bool $showLossModal = false;
+    public string $lossModalOutlet = '';
+    public string $lossModalTanggal = '';
+    public string $lossModalTanggalAkhir = '';
+    public array $lossModalItems = [];
+    public int $lossModalTotal = 0;
+
     public function mount(): void
     {
         $today = now();
@@ -66,6 +75,46 @@ class KontribusiHarianToko extends Component
     public function render()
     {
         return view('livewire.operasional.kontribusi-harian-toko');
+    }
+
+    public function openLossModal(string $tanggal, ?int $tokoId = null, ?int $nominal = null): void
+    {
+        $dateStart = $tanggal;
+        $dateEnd = $tanggal;
+
+        $tid = (int)($tokoId ?: ($this->selectedTokoId ?: 0));
+        if ($tid <= 0) {
+            $this->lossModalItems = [];
+            $this->showLossModal = true;
+            return;
+        }
+
+        $items = $this->fetchLossItemsForModalRange('', $dateStart, $dateEnd, $tid);
+
+        $outletLabel = $this->namaToko;
+        if (!empty($items)) {
+            $first = $items[0] ?? [];
+            if (!empty($first['outlet_label'])) {
+                $outletLabel = (string) $first['outlet_label'];
+            }
+        }
+
+        $this->lossModalOutlet = $outletLabel;
+        $this->lossModalTanggal = $dateStart ?? '';
+        $this->lossModalTanggalAkhir = $dateEnd ?? '';
+        $this->lossModalItems = $items;
+        $this->lossModalTotal = (int) ($nominal ?? 0);
+        $this->showLossModal = true;
+    }
+
+    public function closeLossModal(): void
+    {
+        $this->showLossModal = false;
+        $this->lossModalOutlet = '';
+        $this->lossModalTanggal = '';
+        $this->lossModalTanggalAkhir = '';
+        $this->lossModalItems = [];
+        $this->lossModalTotal = 0;
     }
 
     public function load(): void
@@ -162,6 +211,15 @@ class KontribusiHarianToko extends Component
         ->orderByDesc('id')
         ->get();
 
+    $kurangSetoranMap = KurangSetoran::query()
+        ->where('toko_id', $tokoId)
+        ->whereBetween('tanggal', [$start, $end])
+        ->selectRaw('DATE(tanggal) as tgl, SUM(nominal) as total')
+        ->groupBy('tgl')
+        ->pluck('total', 'tgl')
+        ->map(fn($v) => (int) $v)
+        ->toArray();
+
     $picked = [];
     foreach ($rows as $r) {
         $tgl   = (string) ($r->tanggal ?? '');
@@ -180,6 +238,16 @@ class KontribusiHarianToko extends Component
             ?? $p['hrg']
             ?? 0
         );
+
+        $payloadKurang = (int) ($p['kurang_setoran'] ?? 0);
+        $kurangSetoran = $payloadKurang > 0
+            ? $payloadKurang
+            : (int) ($kurangSetoranMap[$tgl] ?? 0);
+
+        $totalKontribusiPayload = (int) ($p['total_kontribusi'] ?? 0);
+        $totalKontribusiFinal = $payloadKurang > 0
+            ? $totalKontribusiPayload
+            : ($totalKontribusiPayload - $kurangSetoran);
 
         $picked[$key] = [
             'tanggal' => $tgl,
@@ -206,12 +274,56 @@ class KontribusiHarianToko extends Component
             'telur_rp'     => (int) ($p['telur_rp'] ?? 0),
 
             'loss_bahan'       => (int) ($p['loss_bahan'] ?? 0),
-            'total_kontribusi' => (int) ($p['total_kontribusi'] ?? 0),
+            'kurang_setoran'   => $kurangSetoran,
+            'total_kontribusi' => $totalKontribusiFinal,
         ];
     }
 
     return array_values($picked);
 }
+
+    private function fetchLossItemsForModalRange(string $outletKey, ?string $dateAwal, ?string $dateAkhir, ?int $tokoId = null): array
+    {
+        if (!$dateAwal) return [];
+
+        if ($tokoId) {
+            $toko = MasterToko::query()->select('id','nmtoko')->where('id', $tokoId)->first();
+        } else {
+            $outletKeyUpper = mb_strtoupper(trim($outletKey));
+            $toko = MasterToko::query()->select('id','nmtoko')->whereRaw('UPPER(TRIM(nmtoko)) = ?', [$outletKeyUpper])->first();
+            if (!$toko) {
+                $toko = MasterToko::query()->select('id','nmtoko')->whereRaw('UPPER(TRIM(nmtoko)) LIKE ?', ['%' . $outletKeyUpper . '%'])->first();
+            }
+        }
+
+        if (!$toko) return [];
+
+        $rows = LossBahan::query()
+            ->where('toko_id', (int)$toko->id)
+            ->whereDate('tanggal', '>=', $dateAwal)
+            ->whereDate('tanggal', '<=', $dateAkhir ?? $dateAwal)
+            ->with(['barang'])
+            ->get();
+
+        if ($rows->isEmpty()) return [];
+
+        $agg = [];
+        foreach ($rows as $lr) {
+            $nama = $lr->barang?->nmbarang ?: ($lr->keterangan ?: ('Barang ID ' . ($lr->barang_id ?? '-')));
+            $satuan = $lr->barang?->sat1;
+            $agg[$nama]['barang'] = $nama;
+            $agg[$nama]['nominal'] = ($agg[$nama]['nominal'] ?? 0) + (int)($lr->nominal ?? 0);
+            $agg[$nama]['qty'] = ($agg[$nama]['qty'] ?? 0) + (int)($lr->qty ?? 0);
+            if (!empty($satuan)) $agg[$nama]['satuan'] = (string)$satuan;
+            $agg[$nama]['outlet_label'] = $toko->nmtoko;
+        }
+
+        $list = array_values($agg);
+        usort($list, function ($a, $b) {
+            return strnatcasecmp($a['barang'] ?? '', $b['barang'] ?? '');
+        });
+        return $list;
+    }
 
 
     /**

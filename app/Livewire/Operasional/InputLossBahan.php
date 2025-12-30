@@ -152,6 +152,7 @@ class InputLossBahan extends Component
             'toko_id' => $toko->id,
             'api_id'  => $toko->api_id ?? null,
             'barang_id' => $this->barang_id,
+            'qty' => $this->qty,
             'nominal' => (int)$this->nominal,
             'keterangan' => $this->keterangan ?: null,
         ]);

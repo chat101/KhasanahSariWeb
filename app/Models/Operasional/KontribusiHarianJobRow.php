@@ -17,6 +17,7 @@ class KontribusiHarianJobRow extends Model
     ];
 
     protected $casts = ['payload' => 'array'];
+    
     public function job()
     {
         return $this->belongsTo(KontribusiHarianJob::class, 'job_id');

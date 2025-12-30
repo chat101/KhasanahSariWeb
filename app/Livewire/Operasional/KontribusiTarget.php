@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Operasional\LossBahan;
+use App\Models\Operasional\KurangSetoran;
 
 class KontribusiTarget extends Component
 {
@@ -23,7 +24,14 @@ class KontribusiTarget extends Component
     public $periodeAwal;
     public $periodeAkhir;
 
-
+    // Loss Bahan Modal
+    public bool $showLossModal = false;
+    public string $lossModalOutlet = '';
+    public string $lossModalTanggal = '';
+    public string $lossModalTanggalAkhir = '';
+    public array $lossModalItems = [];
+    public int $lossModalTotal = 0;
+    private array $lossBarangListMap = [];
 
     // ✅ hanya simpan key, hasil besar di cache
     public ?string $resultKey = null;
@@ -218,24 +226,6 @@ private function aggPayloads(array $payloads): array
 
         return 'kontribusi_bulan_lalu:result:v1:' . md5($userId . '|' . $start . '|' . $end . '|' . implode(',', $tokoIds));
     }
-    private function fetchLossBahanByToko(array $tokoIds, string $start, string $end): array
-    {
-        $tokoIds = array_values(array_unique(array_filter(array_map('intval', $tokoIds))));
-        if (empty($tokoIds)) return [];
-
-        $cacheKey = 'loss_bahan:sum:v1:' . md5(json_encode($tokoIds) . "|$start|$end");
-
-        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tokoIds, $start, $end) {
-            return LossBahan::query()
-                ->selectRaw('toko_id, SUM(nominal) as total')
-                ->whereBetween('tanggal', [$start, $end])
-                ->whereIn('toko_id', $tokoIds)
-                ->groupBy('toko_id')
-                ->pluck('total', 'toko_id')
-                ->map(fn($v) => (int) $v)
-                ->toArray();
-        });
-    }
     public function loadByTarget()
     {
         $this->validate([
@@ -287,7 +277,15 @@ private function aggPayloads(array $payloads): array
 
 
         $dailyByToko = $this->fetchDailyPayloads($tokoIds, $start, $end);
-        $lossByToko  = $this->fetchLossBahanByToko($tokoIds, $start, $end);
+        // ✅ kurang setoran aggregated per toko dalam range
+        $kurangSetoranByToko = KurangSetoran::query()
+            ->whereIn('toko_id', $tokoIds)
+            ->whereBetween('tanggal', [$start, $end])
+            ->selectRaw('toko_id, SUM(nominal) as total')
+            ->groupBy('toko_id')
+            ->pluck('total', 'toko_id')
+            ->map(fn($v) => (int) $v)
+            ->toArray();
         $rows = [];
         foreach ($tokoIds as $tokoId) {
             $tokoDb = $tokoLocal[$tokoId] ?? null;
@@ -297,7 +295,8 @@ private function aggPayloads(array $payloads): array
             if (empty($payloads)) continue;
 
             $agg  = $this->aggPayloads($payloads);
-            $loss = (int) ($lossByToko[$tokoId] ?? 0); // ✅ ini yang benar (index = tokoId)
+            $loss = (int) ($agg['loss_bahan'] ?? 0); // ✅ sudah ada di aggregated payloads
+            $kurang = (int) ($kurangSetoranByToko[$tokoId] ?? 0);
 
             $areaId = (int)($tokoDb->area_id ?? 0);
             $areaLabel = $tokoDb->area?->nama_area ?: '-';
@@ -307,6 +306,7 @@ private function aggPayloads(array $payloads): array
                 ?: ($tokoDb->area?->wilayah_id ? 'WILAYAH-' . $tokoDb->area->wilayah_id : '-');
 
             $rows[] = [
+                'toko_id'       => $tokoId,
                 'wilayah_label' => $wilayahLabel,
                 'area_label'    => $areaLabel,
                 'area_pic'      => $areaPic,
@@ -330,9 +330,10 @@ private function aggPayloads(array $payloads): array
 
                 // ✅ loss dari tabel loss_bahans
                 'loss_bahan' => $loss,
+                'kurang_setoran' => $kurang,
 
                 // kalau loss itu pengurang, ubah jadi minus
-                'total_kontribusi' => (int)($agg['total_kontribusi'] ?? 0) - $loss,
+                'total_kontribusi' => (int)($agg['total_kontribusi'] ?? 0) - $loss - $kurang,
             ];
         }
 
@@ -373,6 +374,7 @@ private function aggPayloads(array $payloads): array
             'telur_rp' => (int) collect($rows)->sum('telur_rp'),
 
             'loss_bahan' => (int) collect($rows)->sum('loss_bahan'),
+            'kurang_setoran' => (int) collect($rows)->sum('kurang_setoran'),
             'total_kontribusi' => (int) collect($rows)->sum('total_kontribusi'),
         ];
 
@@ -385,5 +387,102 @@ private function aggPayloads(array $payloads): array
         ], now()->addMinutes(10));
 
         $this->resultKey = $key;
+    }
+
+    public function openLossModal(string $outlet, ?string $tanggalAwal = null, ?string $tanggalAkhir = null, ?int $nominal = null, ?int $tokoId = null): void
+    {
+        $dateStart = $tanggalAwal ?? $this->periodeAwal;
+        $dateEnd = $tanggalAkhir ?? $this->periodeAkhir;
+        
+        $items = $this->fetchLossItemsForModalRange($outlet, $dateStart, $dateEnd, $tokoId);
+
+        $outletLabel = $outlet;
+        if (!empty($items)) {
+            $first = $items[0];
+            if (!empty($first['outlet_label'])) {
+                $outletLabel = (string) $first['outlet_label'];
+            }
+        }
+
+        $this->lossModalOutlet = $outletLabel;
+        $this->lossModalTanggal = $dateStart ?? '';
+        $this->lossModalTanggalAkhir = $dateEnd ?? '';
+        $this->lossModalItems = $items;
+        $this->lossModalTotal = (int) ($nominal ?? 0);
+        $this->showLossModal = true;
+    }
+
+    public function closeLossModal(): void
+    {
+        $this->showLossModal = false;
+        $this->lossModalOutlet = '';
+        $this->lossModalTanggal = '';
+        $this->lossModalTanggalAkhir = '';
+        $this->lossModalItems = [];
+        $this->lossModalTotal = 0;
+    }
+
+    private function fetchLossItemsForModalRange(string $outletKey, ?string $dateAwal, ?string $dateAkhir, ?int $tokoId = null): array
+    {
+        if (!$dateAwal) return [];
+
+        // Prioritaskan pakai toko_id jika tersedia
+        if ($tokoId) {
+            $toko = MasterToko::query()
+                ->select('id','nmtoko')
+                ->where('id', $tokoId)
+                ->first();
+        } else {
+            $outletKeyUpper = mb_strtoupper(trim($outletKey));
+            
+            $toko = MasterToko::query()
+                ->select('id','nmtoko')
+                ->whereRaw('UPPER(TRIM(nmtoko)) = ?', [$outletKeyUpper])
+                ->first();
+
+            if (!$toko) {
+                $toko = MasterToko::query()
+                    ->select('id','nmtoko')
+                    ->whereRaw('UPPER(TRIM(nmtoko)) LIKE ?', ['%' . $outletKeyUpper . '%'])
+                    ->first();
+            }
+
+            if (!$toko && !empty($this->tokosUser)) {
+                $tokoIds = collect($this->tokosUser)->pluck('id')->map(fn($v) => (int)$v)->filter()->unique()->values()->all();
+                $toko = MasterToko::query()
+                    ->select('id','nmtoko')
+                    ->whereIn('id', $tokoIds)
+                    ->whereRaw('UPPER(TRIM(nmtoko)) LIKE ?', ['%' . $outletKeyUpper . '%'])
+                    ->first();
+            }
+        }
+
+        if (!$toko) return [];
+
+        $rows = LossBahan::query()
+            ->where('toko_id', (int)$toko->id)
+            ->whereDate('tanggal', '>=', $dateAwal)
+            ->whereDate('tanggal', '<=', $dateAkhir ?? $dateAwal)
+            ->with(['barang'])
+            ->get();
+
+        if ($rows->isEmpty()) return [];
+
+        $agg = [];
+        foreach ($rows as $lr) {
+            $nama = $lr->barang?->nmbarang ?: ($lr->keterangan ?: ('Barang ID ' . ($lr->barang_id ?? '-')));
+            $satuan = $lr->barang?->sat1;
+            $agg[$nama]['barang'] = $nama;
+            $agg[$nama]['nominal'] = ($agg[$nama]['nominal'] ?? 0) + (int)($lr->nominal ?? 0);
+            $agg[$nama]['qty'] = ($agg[$nama]['qty'] ?? 0) + (int)($lr->qty ?? 0);
+            if (!empty($satuan)) $agg[$nama]['satuan'] = (string)$satuan;
+            $agg[$nama]['outlet_label'] = $toko->nmtoko;
+        }
+
+        $list = array_values($agg);
+        usort($list, function ($a, $b) {
+            return strnatcasecmp($a['barang'] ?? '', $b['barang'] ?? '');
+        });
+        return $list;
     }
 }

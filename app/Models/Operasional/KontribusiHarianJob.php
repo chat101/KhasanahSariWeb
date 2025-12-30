@@ -12,6 +12,11 @@ class KontribusiHarianJob extends Model
     ];
     protected $casts = ['grand_totals' => 'array'];
 
+  public function toko()
+  {
+      return $this->belongsTo(\App\Models\MasterToko::class, 'toko_id');
+  }
+
   public function rows()
 {
     return $this->hasMany(

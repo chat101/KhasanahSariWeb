@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('bank_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('bank_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('category_id')->nullable()->constrained('categories_transactions')->nullOnDelete();
             $table->date('tanggal');
             $table->enum('tipe', ['debit', 'kredit']);
             $table->decimal('jumlah', 15, 2);

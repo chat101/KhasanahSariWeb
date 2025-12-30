@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class LossBahan extends Model
 {
     protected $fillable = [
-        'tanggal','toko_id','api_id','barang_id','nominal','keterangan',
+        'tanggal','toko_id','api_id','barang_id','qty','nominal','keterangan',
     ];
 
     protected $casts = [

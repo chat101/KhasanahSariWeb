@@ -21,3 +21,17 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+# Bootstrap cache
+/bootstrap/cache/
+
+# Log files
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor swap files
+*.swp
+*.swo
+*~

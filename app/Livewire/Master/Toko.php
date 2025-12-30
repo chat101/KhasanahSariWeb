@@ -128,9 +128,7 @@ class Toko extends Component
 
         $this->produkId = $toko->id;
         $this->nama     = $toko->nmtoko;
-        $this->nama     = $toko->nmtoko;
         $this->apiid    = $toko->api_id;
-
         $this->alamat   = $toko->alamat;
         $this->status   = (string)($toko->status ?? 1);
 

@@ -4,6 +4,7 @@ namespace App\Livewire\Operasional;
 
 use App\Models\MasterToko;
 use App\Models\Operasional\KontribusiHarianJobRow;
+use App\Models\Operasional\KurangSetoran;
 use App\Models\Operasional\LossBahan;
 use App\Models\Operasional\MasterProyeksiKontribusi;
 use App\Models\Operasional\MasterTrendInflasi;
@@ -32,6 +33,13 @@ class KontribusiHarianArea extends Component
 
     public array $grandTotals = [];
     public ?string $loadDuration = null;
+    /** @var array<string,array<string,array<int,array{barang:string,nominal:int,qty:int}>>> List barang loss per outlet per tanggal */
+    public array $lossBarangListMap = [];
+    public bool $showLossModal = false;
+    public string $lossModalOutlet = '';
+    public string $lossModalTanggal = '';
+    public array $lossModalItems = [];
+    public int $lossModalTotal = 0;
 
     public function mount(array $tokosUser = []): void
     {
@@ -108,11 +116,12 @@ class KontribusiHarianArea extends Component
 
         $snap = $this->fetchSnapshotRows($tokoIds, $start, $end);
         $this->rows = $snap;
+        $this->lossBarangListMap = $this->buildLossBarangData($tokoIds, $start, $end);
 
         // GRAND TOTAL: sum Rp & hrg (weighted)
         $grand = [
-            'target' => ['hrg'=>0,'selisih_rp'=>0,'kontribusi'=>0,'disc'=>0,'retur'=>0,'gas'=>0,'telur'=>0,'loss'=>0,'total'=>0],
-            'bl'     => ['hrg'=>0,'selisih_rp'=>0,'kontribusi'=>0,'disc'=>0,'retur'=>0,'gas'=>0,'telur'=>0,'loss'=>0,'total'=>0],
+            'target' => ['hrg'=>0,'selisih_rp'=>0,'kontribusi'=>0,'disc'=>0,'retur'=>0,'gas'=>0,'telur'=>0,'loss_bahan'=>0,'kurang_setoran'=>0,'total_kontribusi'=>0],
+            'bl'     => ['hrg'=>0,'selisih_rp'=>0,'kontribusi'=>0,'disc'=>0,'retur'=>0,'gas'=>0,'telur'=>0,'loss_bahan'=>0,'kurang_setoran'=>0,'total_kontribusi'=>0],
         ];
 
         foreach ($snap as $byTanggal) {
@@ -130,8 +139,9 @@ class KontribusiHarianArea extends Component
                     $grand[$bucket]['gas']   += (int)($r['gas_rp'] ?? 0);
                     $grand[$bucket]['telur'] += (int)($r['telur_rp'] ?? 0);
 
-                    $grand[$bucket]['loss']  += (int)($r['loss_bahan'] ?? 0);
-                    $grand[$bucket]['total'] += (int)($r['total_kontribusi'] ?? 0);
+                    $grand[$bucket]['loss_bahan']      += (int)($r['loss_bahan'] ?? 0);
+                    $grand[$bucket]['kurang_setoran']  += (int)($r['kurang_setoran'] ?? 0);
+                    $grand[$bucket]['total_kontribusi'] += (int)($r['total_kontribusi'] ?? 0);
                 }
             }
         }
@@ -139,8 +149,86 @@ class KontribusiHarianArea extends Component
         $this->grandTotals  = $grand;
         $this->loadDuration = number_format(microtime(true) - $startTime, 2);
     }
+
+    public function openLossModal(string $outlet, ?string $tanggal = null, ?int $nominal = null, ?string $outletLabelParam = null): void
+    {
+        $dateKey = $tanggal ? Carbon::parse($tanggal)->toDateString() : null;
+        $items = $dateKey && isset($this->lossBarangListMap[$outlet][$dateKey])
+            ? $this->lossBarangListMap[$outlet][$dateKey]
+            : [];
+
+        if (empty($items) && $dateKey) {
+            $items = $this->fetchLossItemsForModal($outlet, $dateKey);
+        }
+
+        $outletLabel = $outlet;
+        if (!empty($items)) {
+            $first = $items[0];
+            if (!empty($first['outlet_label'])) {
+                $outletLabel = (string) $first['outlet_label'];
+            }
+        } elseif (!empty($outletLabelParam)) {
+            $outletLabel = $outletLabelParam;
+        }
+
+        $this->lossModalOutlet = $outletLabel;
+        $this->lossModalTanggal = $dateKey ?? '';
+        $this->lossModalItems = $items;
+        $this->lossModalTotal = (int) ($nominal ?? 0);
+        $this->showLossModal = true;
+    }
+
+    public function closeLossModal(): void
+    {
+        $this->showLossModal = false;
+        $this->lossModalOutlet = '';
+        $this->lossModalTanggal = '';
+        $this->lossModalItems = [];
+        $this->lossModalTotal = 0;
+    }
+
+    /**
+     * Fallback: query detail LossBahan per outlet (by name) dan tanggal saat modal dibuka.
+     * @param string $outletKey uppercase/trimmed outlet name
+     * @param string $dateKey Y-m-d
+     * @return array<int,array{barang:string,nominal:int,qty:int,satuan?:string,outlet_label?:string}>
+     */
+    private function fetchLossItemsForModal(string $outletKey, string $dateKey): array
+    {
+        $toko = MasterToko::query()
+            ->select('id','nmtoko')
+            ->whereRaw('UPPER(TRIM(nmtoko)) = ?', [mb_strtoupper(trim($outletKey))])
+            ->first();
+
+        if (!$toko) return [];
+
+        $rows = LossBahan::query()
+            ->whereDate('tanggal', $dateKey)
+            ->where('toko_id', (int)$toko->id)
+            ->with(['barang'])
+            ->get();
+
+        if ($rows->isEmpty()) return [];
+
+        $agg = [];
+        foreach ($rows as $lr) {
+            $nama = $lr->barang?->nmbarang ?: ($lr->keterangan ?: ('Barang ID ' . ($lr->barang_id ?? '-')));
+            $satuan = $lr->barang?->sat1;
+            $agg[$nama]['barang'] = $nama;
+            $agg[$nama]['nominal'] = ($agg[$nama]['nominal'] ?? 0) + (int)($lr->nominal ?? 0);
+            $agg[$nama]['qty'] = ($agg[$nama]['qty'] ?? 0) + (int)($lr->qty ?? 0);
+            if (!empty($satuan)) $agg[$nama]['satuan'] = (string)$satuan;
+            $agg[$nama]['outlet_label'] = $toko->nmtoko;
+        }
+
+        $list = array_values($agg);
+        usort($list, function ($a, $b) {
+            return strnatcasecmp($a['barang'] ?? '', $b['barang'] ?? '');
+        });
+        return $list;
+    }
  /**
-     * ✅ Download tanpa harus klik "Tampilkan"
+     * ✅ Download dengan SweetAlert (hindari Livewire hydration error)
      */
     public function download()
     {
@@ -183,11 +271,13 @@ class KontribusiHarianArea extends Component
             }
         }
 
-        return Excel::download(
-            new OperasionalKontribusiHarianAreaExport($snap, $grand, $start, $end),
-            "detail_kontribusi_harian_area_{$start}_sd_{$end}.xlsx"
-        );
+        // Generate file langsung tanpa menyimpan ke state Livewire
+        $export = new OperasionalKontribusiHarianAreaExport($snap, $grand, $start, $end);
+        $filename = "detail_kontribusi_harian_area_{$start}_sd_{$end}.xlsx";
+        
+        return \Maatwebsite\Excel\Facades\Excel::download($export, $filename);
     }
+
     private function resolveParamsOrEmpty(): array
     {
         $this->validate([
@@ -300,21 +390,7 @@ class KontribusiHarianArea extends Component
     // Data fetch
     // =========================
 
-    private function fetchLossByTokoTanggal(array $tokoIds, string $start, string $end): array
-    {
-        $tokoIds = array_values(array_unique(array_filter(array_map('intval', $tokoIds))));
-        if (empty($tokoIds)) return [];
 
-        return LossBahan::query()
-            ->selectRaw('DATE(tanggal) as tgl, toko_id, SUM(nominal) as total')
-            ->whereBetween('tanggal', [$start, $end])
-            ->whereIn('toko_id', $tokoIds)
-            ->groupBy('tgl', 'toko_id')
-            ->get()
-            ->groupBy('tgl')
-            ->map(fn($g) => $g->pluck('total', 'toko_id')->map(fn($v) => (int)$v)->toArray())
-            ->toArray();
-    }
 
     private function fetchSnapshotRows(array $tokoIds, string $start, string $end): array
     {
@@ -332,8 +408,13 @@ class KontribusiHarianArea extends Component
             ->whereIn('toko_id', $tokoIds)
             ->max('id');
 
-        $cacheKey = 'kh_area:snap_rows:v8:' . md5(
-            json_encode($tokoIds) . "|$start|$end|" . (string)$latestRowId . "|" . (string)$latestLossId
+        $latestKurangId = KurangSetoran::query()
+            ->whereBetween('tanggal', [$start, $end])
+            ->whereIn('toko_id', $tokoIds)
+            ->max('id');
+
+        $cacheKey = 'kh_area:snap_rows:v9:' . md5(
+            json_encode($tokoIds) . "|$start|$end|" . (string)$latestRowId . "|" . (string)$latestLossId . "|" . (string)$latestKurangId
         );
 
         return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($tokoIds, $start, $end) {
@@ -376,8 +457,6 @@ class KontribusiHarianArea extends Component
                 ->get()
                 ->keyBy('id');
 
-            $lossMap = $this->fetchLossByTokoTanggal($tokoIds, $start, $end);
-
             $getHrg = function (array $p): int {
                 $candidates = ['sales_rp','hrg','penjualan_rp','neto_rp','neto','sales','penjualan','omzet_rp'];
                 foreach ($candidates as $k) {
@@ -399,6 +478,23 @@ class KontribusiHarianArea extends Component
                 return 0;
             };
 
+            // Ambil kurang setoran per toko per tanggal dalam periode
+            $kurangMap = [];
+            $ksRows = KurangSetoran::query()
+                ->selectRaw('toko_id, tanggal, SUM(nominal) as total')
+                ->whereBetween('tanggal', [$start, $end])
+                ->whereIn('toko_id', $tokoIds)
+                ->groupBy('toko_id', 'tanggal')
+                ->get();
+
+            foreach ($ksRows as $row) {
+                $tid  = (int) ($row->toko_id ?? 0);
+                $tglx = \Carbon\Carbon::parse($row->tanggal)->toDateString();
+                if ($tid > 0 && $tglx !== '') {
+                    $kurangMap[$tid][$tglx] = (int) ($row->total ?? 0);
+                }
+            }
+
             $out = [];
 
             foreach ($picked as $item) {
@@ -417,8 +513,10 @@ class KontribusiHarianArea extends Component
                 $gasRp    = $this->toInt($p['gas_rp'] ?? 0);
                 $telurRp  = $this->toInt($p['telur_rp'] ?? 0);
 
-                $loss = (int) ($lossMap[$tgl][$tokoId] ?? 0);
-                $totalKontrib = $this->toInt($p['total_kontribusi'] ?? ($p['total'] ?? 0)) - $loss;
+                $loss   = (int) ($p['loss_bahan'] ?? 0);
+                $tglKey = \Carbon\Carbon::parse($tgl)->toDateString();
+                $kurang = (int) ($kurangMap[$tokoId][$tglKey] ?? 0);
+                $totalKontrib = $this->toInt($p['total_kontribusi'] ?? ($p['total'] ?? 0)) - $loss - $kurang;
 
                 $out[$outlet] ??= [];
                 $out[$outlet][$tgl] ??= [];
@@ -445,6 +543,7 @@ class KontribusiHarianArea extends Component
                     'telur_pct' => $this->pct((float)$telurRp, (float)$hrgNow),
 
                     'loss_bahan'       => $loss,
+                    'kurang_setoran'   => $kurang,
                     'total_kontribusi' => $totalKontrib,
                 ];
             }
@@ -463,5 +562,59 @@ class KontribusiHarianArea extends Component
 
             return $out;
         });
+    }
+
+    /**
+     * Ambil list barang loss per outlet untuk modal (kelompok per toko, sum nominal & qty).
+     * @return array<string,array<int,array{barang:string,nominal:int,qty:int}>>
+     */
+    private function buildLossBarangData(array $tokoIds, string $startDate, string $endDate): array
+    {
+        $result = [];
+
+        $lossRows = LossBahan::query()
+            ->whereBetween('tanggal', [$startDate, $endDate])
+            ->whereIn('toko_id', $tokoIds)
+            ->with(['toko', 'barang'])
+            ->get();
+
+        if ($lossRows->isEmpty()) {
+            return $result;
+        }
+
+        $tmp = [];
+        foreach ($lossRows as $lr) {
+            $outletLabel = $lr->toko?->nmtoko ?? 'Outlet ?';
+            $outletKey   = strtoupper(trim($outletLabel));
+            $tgl = Carbon::parse($lr->tanggal)->toDateString();
+            $nmBarang = $lr->barang?->nmbarang;
+            $satuan = $lr->barang?->sat1;
+            if (!$nmBarang) {
+                $nmBarang = $lr->keterangan ?: ('Barang ID ' . ($lr->barang_id ?? '-'));
+            }
+
+            $tmp[$outletKey][$tgl][$nmBarang]['barang'] = $nmBarang;
+            $tmp[$outletKey][$tgl][$nmBarang]['nominal'] = ($tmp[$outletKey][$tgl][$nmBarang]['nominal'] ?? 0) + (int)($lr->nominal ?? 0);
+            $tmp[$outletKey][$tgl][$nmBarang]['qty'] = ($tmp[$outletKey][$tgl][$nmBarang]['qty'] ?? 0) + (int)($lr->qty ?? 0);
+            $tmp[$outletKey][$tgl][$nmBarang]['outlet_label'] = $outletLabel;
+            if (!empty($satuan)) {
+                $tmp[$outletKey][$tgl][$nmBarang]['satuan'] = (string) $satuan;
+            }
+        }
+
+        foreach ($tmp as $outletKey => $byDate) {
+            ksort($byDate);
+
+            foreach ($byDate as $tgl => $barangSet) {
+                $list = array_values($barangSet);
+                usort($list, function ($a, $b) {
+                    return strnatcasecmp($a['barang'] ?? '', $b['barang'] ?? '');
+                });
+                $result[$outletKey][$tgl] = $list;
+            }
+        }
+
+        ksort($result, SORT_NATURAL | SORT_FLAG_CASE);
+        return $result;
     }
 }

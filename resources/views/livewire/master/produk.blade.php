@@ -15,51 +15,49 @@
             </div>
         @endif
 
-        {{-- Integrated Toolbar --}}
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-1">
-            <div class="flex items-center gap-2 w-full md:w-1/2">
-                <div class="relative w-full">
-                    <input wire:model.live="search" class="py-1 pl-8 pr-8 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari nama bahan..." />
-                    <span class="absolute left-2 top-1.5 text-gray-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" /></svg>
-                    </span>
-                    @if($search)
-                    <button wire:click="$set('search','')" class="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600" title="Clear">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                    @endif
+        {{-- Header + Add Button --}}
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+          <div class="flex-1">
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-0 text-black">
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold flex items-center gap-2">
+                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 text-xs">PR</span>
+                        Master Produk
+                    </h2>
+                    <span class="text-[11px] text-gray-500">Kelola master produk</span>
                 </div>
             </div>
-            <div class="flex items-center gap-2 justify-end w-full md:w-auto">
-                <button wire:click="openModal"
-                    class="flex items-center gap-1 bg-blue-400 hover:bg-blue-500 text-white py-1 px-4 text-xs rounded-lg shadow transition">
-                    ➕ Tambah
-                </button>
-            </div>
+          </div>
+          <div class="flex items-center gap-2 justify-end w-full md:w-auto">
+            <button wire:click="openModal"
+                class="flex items-center gap-1 bg-blue-400 hover:bg-blue-500 text-white py-1 px-4 text-xs rounded-lg shadow transition">
+                ➕ Tambah
+            </button>
+          </div>
         </div>
 
-        {{-- HEADER --}}
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-3 text-black">
-            <div class="flex items-center justify-between gap-2">
-                <h2 class="text-sm font-semibold flex items-center gap-2">
-                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 text-xs">PR</span>
-                    Master Produk
-                </h2>
-                <span class="text-[11px] text-gray-500">Kelola master produk</span>
-            </div>
-
-            <div class="mt-3 mb-2">
-                <div class="w-1/3">
-                    <input wire:model.live="search" class="form-control py-1 pl-8 pr-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari nama bahan..." />
-                </div>
+        {{-- Search Box - Directly Above Table --}}
+        <div class="flex items-center gap-2 mb-2">
+            <div class="relative w-full md:w-1/3">
+                <input wire:model.live="search" class="py-1 pl-8 pr-8 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-300 bg-white text-xs w-full" type="search" placeholder="Cari nama bahan..." />
+                <span class="absolute left-2 top-1.5 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" /></svg>
+                </span>
+                @if($search)
+                <button wire:click="$set('search','')" class="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600" title="Clear">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                @endif
             </div>
         </div>
 
         {{-- Product Table --}}
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="bg-white rounded-xl shadow-lg ring-1 ring-gray-100 overflow-hidden">
+          <div class="h-1 bg-gradient-to-r from-indigo-500 to-emerald-400"></div>
+          <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr class="text-left">
+            <thead class="bg-white">
+              <tr class="text-left border-b">
                 <th class="px-4 py-3 font-semibold text-gray-700">No</th>
                 <th class="px-4 py-3 font-semibold text-gray-700">Id</th>
                 <th class="px-4 py-3 font-semibold text-gray-700">Id Barang</th>
@@ -75,7 +73,7 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
               @forelse($produks as $produk)
-                <tr class="hover:bg-gray-50">
+                <tr class="transform transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm">
                   <td class="px-4 py-3">{{ ($produks->currentPage() - 1) * $produks->perPage() + $loop->iteration }}</td>
                   <td class="px-4 py-3">{{ $produk->id }}</td>
                   <td class="px-4 py-3">{{ $produk->produk_id }}</td>
@@ -112,11 +110,21 @@
                 </tr>
               @empty
                 <tr>
-                  <td colspan="11" class="text-center py-6 text-gray-500">Tidak ada data</td>
+                  <td colspan="11" class="px-6 py-10">
+                    <div class="text-center text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M16 3v4M8 3v4"/></svg>
+                      <div class="text-lg font-medium mt-3">Belum ada produk</div>
+                      <div class="text-xs mt-1">Tambah produk untuk mulai mengelola data</div>
+                      <div class="mt-4">
+                        <button wire:click="openModal" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Tambah Produk</button>
+                      </div>
+                    </div>
+                  </td>
                 </tr>
               @endforelse
             </tbody>
           </table>
+          </div>
         </div>
 
         {{-- Pagination --}}

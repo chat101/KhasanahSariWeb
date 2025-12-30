@@ -88,15 +88,65 @@
                             <span wire:loading wire:target="load">Loading...</span>
                         </button>
 
-                        <button wire:click="download"
-                                wire:loading.attr="disabled"
-                                wire:target="download"
+                        <button @click="document.getElementById('downloadForm').submit()"
                                 class="bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-wait">
-                            <span wire:loading.remove wire:target="download">Download</span>
+                            <span>📥 Download Excel</span>
                             <span wire:loading wire:target="download">Menyiapkan...</span>
                         </button>
                     </div>
                 </div>
+
+                {{-- LOSS MODAL --}}
+                @if($showLossModal)
+                    <div class="fixed inset-0 z-40 flex items-center justify-center px-4">
+                        <div class="absolute inset-0 bg-black/40" wire:click="closeLossModal"></div>
+
+                        <div class="relative z-50 w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 p-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-900">Detail Loss Bahan</div>
+                                    <div class="text-[11px] text-gray-500 mt-0.5">Outlet: <span class="font-semibold text-gray-800">{{ $lossModalOutlet }}</span></div>
+                                    @if($lossModalTanggal)
+                                        <div class="text-[11px] text-gray-500">Tanggal: <span class="font-semibold text-gray-800">{{ \Carbon\Carbon::parse($lossModalTanggal)->format('d/m/Y') }}</span></div>
+                                    @endif
+                                </div>
+                                <button wire:click="closeLossModal" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                            </div>
+
+                            <div class="mt-4 max-h-72 overflow-y-auto text-sm space-y-3">
+                                @if(!empty($lossModalItems))
+                                    @foreach($lossModalItems as $barang)
+                                        <div class="bg-gray-50 border border-gray-100 rounded-lg p-3 flex items-center justify-between gap-3">
+                                            <div>
+                                                <div class="text-gray-800 text-[12px] leading-snug">{{ $barang['barang'] ?? '-' }}</div>
+                                                @if(!empty($barang['satuan']))
+                                                    <div class="text-[11px] text-gray-500">Satuan: {{ $barang['satuan'] }}</div>
+                                                @endif
+                                            </div>
+                                            <div class="text-right">
+                                                @if(isset($barang['qty']) && (int)$barang['qty'] > 0)
+                                                    <div class="text-gray-900 font-semibold">{{ number_format((int)$barang['qty'], 0, ',', '.') }}</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @elseif((int)($lossModalTotal ?? 0) > 0)
+                                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
+                                        <div class="text-[11px] text-gray-500 mb-1">Total Loss</div>
+                                        <div class="text-lg font-semibold text-gray-900">{{ number_format((int)$lossModalTotal, 0, ',', '.') }}</div>
+                                        <div class="text-[11px] text-gray-500 mt-1">(tidak ada rincian barang)</div>
+                                    </div>
+                                @else
+                                    <div class="py-6 text-center text-gray-500 text-sm">Tidak ada data loss pada tanggal ini.</div>
+                                @endif
+                            </div>
+
+                            <div class="mt-4 flex justify-end">
+                                <button wire:click="closeLossModal" class="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 text-xs hover:bg-gray-50">Tutup</button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
 
             @if(session()->has('message'))
@@ -124,6 +174,7 @@
                         <th colspan="2" class="px-3 py-2 text-center border-r border-b bg-gray-100">TELUR</th>
 
                         <th rowspan="2" class="px-3 py-2 text-right border-r align-middle bg-gray-100">LOSS BAHAN</th>
+                        <th rowspan="2" class="px-3 py-2 text-right border-r align-middle bg-red-50 border-red-200 text-red-700">KURANG SETORAN</th>
                         <th rowspan="2" class="px-3 py-2 text-right align-middle bg-gray-50">TOTAL KONTRIBUSI</th>
                     </tr>
                     <tr>
@@ -138,6 +189,7 @@
 
                         <th class="px-3 py-2 text-right border-r text-gray-600 bg-gray-50">%</th>
                         <th class="px-3 py-2 text-right border-r text-gray-600 bg-gray-50">RP</th>
+                        {{-- LOSS BAHAN, KURANG SETORAN, TOTAL KONTRIBUSI tidak ada sub-header --}}
                     </tr>
                 </thead>
 
@@ -152,8 +204,15 @@
 
                     @foreach($byOutlet as $outletName => $list)
                         @php
+                            $outletKey = strtoupper(trim($outletName));
                             $rBL = $pickType($list, 'BY BULAN LALU');
                             $rTG = $pickType($list, 'BY TARGET');
+                            $tglDate = \Carbon\Carbon::parse($tgl)->toDateString();
+                            $hasLossDetail = !empty($lossBarangListMap[$outletKey][$tglDate] ?? []);
+                            $hasNominalBL = (int)($rBL['loss_bahan'] ?? 0) > 0;
+                            $hasNominalTG = (int)($rTG['loss_bahan'] ?? 0) > 0;
+                            $clickableBL = $hasLossDetail || $hasNominalBL;
+                            $clickableTG = $hasLossDetail || $hasNominalTG;
                         @endphp
 
                         {{-- BARIS 1: BY BULAN LALU --}}
@@ -188,7 +247,19 @@
                             <td class="px-3 py-2 text-right border-r text-gray-500">{{ $fmtPct($rBL['telur_pct'] ?? null) }}</td>
                             <td class="px-3 py-2 text-right border-r {{ $color($rBL['telur_rp'] ?? 0) }}">{{ $fmtRp($rBL['telur_rp'] ?? 0) }}</td>
 
-                            <td class="px-3 py-2 text-right border-r {{ $color($rBL['loss_bahan'] ?? 0) }}">{{ $fmtRp($rBL['loss_bahan'] ?? 0) }}</td>
+                            <td class="px-3 py-2 text-right border-r {{ $color($rBL['loss_bahan'] ?? 0) }}">
+                                @if($clickableBL)
+                                    <button type="button" class="underline decoration-dashed underline-offset-4" wire:click="openLossModal('{{ addslashes($outletKey) }}', '{{ $tgl }}', {{ (int)($rBL['loss_bahan'] ?? 0) }}, '{{ addslashes($outletName) }}')">
+                                        {{ $fmtRp($rBL['loss_bahan'] ?? 0) }}
+                                    </button>
+                                @else
+                                    {{ $fmtRp($rBL['loss_bahan'] ?? 0) }}
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 text-right border-r text-red-600 font-medium">
+                                @php $ks = (int)($rBL['kurang_setoran'] ?? 0); @endphp
+                                {{ $ks === 0 ? '-' : ('-' . number_format($ks, 0, ',', '.')) }}
+                            </td>
                             <td class="px-3 py-2 text-right font-bold {{ $color($rBL['total_kontribusi'] ?? 0) }}">{{ $fmtRp($rBL['total_kontribusi'] ?? 0) }}</td>
                         </tr>
 
@@ -212,7 +283,19 @@
                             <td class="px-3 py-2 text-right border-r text-gray-500">{{ $fmtPct($rTG['telur_pct'] ?? null) }}</td>
                             <td class="px-3 py-2 text-right border-r {{ $color($rTG['telur_rp'] ?? 0) }}">{{ $fmtRp($rTG['telur_rp'] ?? 0) }}</td>
 
-                            <td class="px-3 py-2 text-right border-r {{ $color($rTG['loss_bahan'] ?? 0) }}">{{ $fmtRp($rTG['loss_bahan'] ?? 0) }}</td>
+                            <td class="px-3 py-2 text-right border-r {{ $color($rTG['loss_bahan'] ?? 0) }}">
+                                @if($clickableTG)
+                                    <button type="button" class="underline decoration-dashed underline-offset-4" wire:click="openLossModal('{{ addslashes($outletKey) }}', '{{ $tgl }}', {{ (int)($rTG['loss_bahan'] ?? 0) }}, '{{ addslashes($outletName) }}')">
+                                        {{ $fmtRp($rTG['loss_bahan'] ?? 0) }}
+                                    </button>
+                                @else
+                                    {{ $fmtRp($rTG['loss_bahan'] ?? 0) }}
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 text-right border-r text-red-600 font-medium">
+                                @php $ks = (int)($rTG['kurang_setoran'] ?? 0); @endphp
+                                {{ $ks === 0 ? '-' : ('-' . number_format($ks, 0, ',', '.')) }}
+                            </td>
                             <td class="px-3 py-2 text-right font-bold {{ $color($rTG['total_kontribusi'] ?? 0) }}">{{ $fmtRp($rTG['total_kontribusi'] ?? 0) }}</td>
                         </tr>
                     @endforeach
@@ -250,8 +333,12 @@
                             <td class="px-3 py-2 text-right border-r text-gray-600">{{ $pct($grandTotals['target']['telur'], $grandTotals['target']['hrg']) }}</td>
                             <td class="px-3 py-2 text-right border-r {{ $color($grandTotals['target']['telur']) }}">{{ $fmtRp($grandTotals['target']['telur']) }}</td>
 
-                            <td class="px-3 py-2 text-right border-r {{ $color($grandTotals['target']['loss']) }}">{{ $fmtRp($grandTotals['target']['loss']) }}</td>
-                            <td class="px-3 py-2 text-right bg-yellow-50 {{ $color($grandTotals['target']['total']) }}">{{ $fmtRp($grandTotals['target']['total']) }}</td>
+                            <td class="px-3 py-2 text-right border-r {{ $color($grandTotals['target']['loss_bahan']) }}">{{ $fmtRp($grandTotals['target']['loss_bahan']) }}</td>
+                            <td class="px-3 py-2 text-right border-r text-red-600 font-bold">
+                                @php $ks = (int)($grandTotals['target']['kurang_setoran'] ?? 0); @endphp
+                                {{ $ks === 0 ? '-' : ('-' . number_format($ks, 0, ',', '.')) }}
+                            </td>
+                            <td class="px-3 py-2 text-right bg-yellow-50 {{ $color($grandTotals['target']['total_kontribusi']) }}">{{ $fmtRp($grandTotals['target']['total_kontribusi']) }}</td>
                         </tr>
 
                         <tr>
@@ -275,8 +362,12 @@
                             <td class="px-3 py-2 text-right border-r text-gray-600">{{ $pct($grandTotals['bl']['telur'], $grandTotals['bl']['hrg']) }}</td>
                             <td class="px-3 py-2 text-right border-r {{ $color($grandTotals['bl']['telur']) }}">{{ $fmtRp($grandTotals['bl']['telur']) }}</td>
 
-                            <td class="px-3 py-2 text-right border-r {{ $color($grandTotals['bl']['loss']) }}">{{ $fmtRp($grandTotals['bl']['loss']) }}</td>
-                            <td class="px-3 py-2 text-right bg-yellow-50 {{ $color($grandTotals['bl']['total']) }}">{{ $fmtRp($grandTotals['bl']['total']) }}</td>
+                            <td class="px-3 py-2 text-right border-r {{ $color($grandTotals['bl']['loss_bahan']) }}">{{ $fmtRp($grandTotals['bl']['loss_bahan']) }}</td>
+                            <td class="px-3 py-2 text-right border-r text-red-600 font-bold">
+                                @php $ks = (int)($grandTotals['bl']['kurang_setoran'] ?? 0); @endphp
+                                {{ $ks === 0 ? '-' : ('-' . number_format($ks, 0, ',', '.')) }}
+                            </td>
+                            <td class="px-3 py-2 text-right bg-yellow-50 {{ $color($grandTotals['bl']['total_kontribusi']) }}">{{ $fmtRp($grandTotals['bl']['total_kontribusi']) }}</td>
                         </tr>
                     </tfoot>
                 @endif
@@ -284,4 +375,12 @@
             </table>
         </div>
     </div>
+
+    {{-- Hidden form untuk download (hindari Livewire hydration error) --}}
+    <form id="downloadForm" method="POST" action="{{ route('kontribusi-area.download') }}" style="display:none;">
+        @csrf
+        <input type="hidden" name="tanggalAwal" value="{{ $tanggalAwal }}">
+        <input type="hidden" name="tanggalAkhir" value="{{ $tanggalAkhir }}">
+        <input type="hidden" name="tokosUser" value="{{ json_encode($tokosUser) }}">
+    </form>
 </div>

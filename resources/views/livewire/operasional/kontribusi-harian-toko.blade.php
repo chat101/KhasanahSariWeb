@@ -135,6 +135,7 @@
                     <th colspan="2" class="px-3 py-2 text-center border-r border-b bg-gray-100">TELUR</th>
 
                     <th rowspan="2" class="px-3 py-2 text-right border-r align-middle">Loss bahan</th>
+                    <th rowspan="2" class="px-3 py-2 text-right border-r align-middle text-red-700">Kurang Setoran</th>
                     <th rowspan="2" class="px-3 py-2 text-right align-middle">Total kontribusi</th>
                 </tr>
                 <tr>
@@ -217,8 +218,16 @@
                                 class="{{ $color($r['telur_rp'] ?? 0) }}">{{ $fmtRp($r['telur_rp'] ?? 0) }}</span>
                         </td>
 
-                        <td class="px-3 py-2 text-right"><span
-                                class="{{ $color($r['loss_bahan'] ?? 0) }}">{{ $fmtRp($r['loss_bahan'] ?? 0) }}</span>
+                        <td class="px-3 py-2 text-right">
+                            @php $lossVal = (int)($r['loss_bahan'] ?? 0); @endphp
+                            <button type="button" class="underline decoration-dashed underline-offset-4 {{ $color($lossVal) }}"
+                                wire:click="openLossModal('{{ $r['tanggal'] ?? '' }}', {{ (int)($selectedTokoId ?? 0) }}, {{ $lossVal }})">
+                                {{ $fmtRp($lossVal) }}
+                            </button>
+                        </td>
+
+                        <td class="px-3 py-2 text-right border-r font-semibold text-red-600">
+                            -{{ $fmtRp($r['kurang_setoran'] ?? 0) }}
                         </td>
 
                         <td class="px-3 py-2 text-right font-bold text-base">
@@ -285,6 +294,10 @@
                         <span class="{{ $colorFooter($tBL['loss_bahan'] ?? 0) }}">{{ $fmtRp($tBL['loss_bahan'] ?? 0) }}</span>
                     </td>
 
+                    <td class="px-3 py-3 text-right border-r font-semibold text-red-600">
+                        -{{ $fmtRp($tBL['kurang_setoran'] ?? 0) }}
+                    </td>
+
                     <td class="px-3 py-3 text-right font-black text-sm">
                         <span class="{{ $colorFooter($tBL['total_kontribusi'] ?? 0) }}">{{ $fmtRp($tBL['total_kontribusi'] ?? 0) }}</span>
                     </td>
@@ -337,6 +350,10 @@
                         <span class="{{ $colorFooter($tTarget['loss_bahan'] ?? 0) }}">{{ $fmtRp($tTarget['loss_bahan'] ?? 0) }}</span>
                     </td>
 
+                    <td class="px-3 py-3 text-right border-r font-semibold text-red-600">
+                        -{{ $fmtRp($tTarget['kurang_setoran'] ?? 0) }}
+                    </td>
+
                     <td class="px-3 py-3 text-right font-black text-sm">
                         <span class="{{ $colorFooter($tTarget['total_kontribusi'] ?? 0) }}">{{ $fmtRp($tTarget['total_kontribusi'] ?? 0) }}</span>
                     </td>
@@ -351,6 +368,65 @@
     {{-- LISTENER --}}
     <div x-data x-on:kontribusi:load-missing.window="$wire.loadMissingLive()"></div>
 
+    {{-- Loss Bahan Modal --}}
+    @if($showLossModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click="closeLossModal">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" wire:click.stop>
+            <div class="px-6 py-4 border-b flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Detail Loss Bahan</h3>
+                    <p class="text-sm text-gray-600 mt-1">
+                        <strong>{{ $lossModalOutlet }}</strong>
+                        @if($lossModalTanggal && $lossModalTanggalAkhir)
+                            · {{ \Carbon\Carbon::parse($lossModalTanggal)->format('d M Y') }}
+                            @if($lossModalTanggal !== $lossModalTanggalAkhir)
+                                s.d. {{ \Carbon\Carbon::parse($lossModalTanggalAkhir)->format('d M Y') }}
+                            @endif
+                        @endif
+                    </p>
+                </div>
+                <button type="button" wire:click="closeLossModal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                @if(empty($lossModalItems))
+                    <div class="text-center py-8 text-gray-500">
+                        Tidak ada data loss bahan untuk periode ini
+                    </div>
+                @else
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-2 text-left font-semibold text-gray-700">Barang</th>
+                                <th class="px-4 py-2 text-right font-semibold text-gray-700">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @foreach($lossModalItems as $item)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-2 text-gray-900">{{ $item['barang'] ?? '-' }}</td>
+                                <td class="px-4 py-2 text-right">
+                                    <span class="font-semibold text-gray-900">{{ number_format($item['qty'] ?? 0, 0, ',', '.') }}</span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+
+            <div class="px-6 py-4 border-t bg-gray-50 flex justify-end">
+                <button type="button" wire:click="closeLossModal" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
     <script>
         document.addEventListener('livewire:init', () => {
             Livewire.on('kontribusi:load-missing', () => {

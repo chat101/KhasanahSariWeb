@@ -5,6 +5,7 @@ namespace App\Services;
 use Carbon\Carbon;
 use App\Models\MasterToko;
 use App\Models\Operasional\LossBahan;
+use App\Models\Operasional\KurangSetoran;
 use App\Models\Operasional\MasterProyeksiKontribusi;
 use App\Models\Operasional\MasterTrendInflasi;
 use App\Models\Operasional\TargetKontribusi;
@@ -271,6 +272,22 @@ class KontribusiHarianTokoService
             ->toArray();
     }
 
+    /**
+     * Fetch kurang setoran map per tanggal untuk range
+     * Format: ['2025-12-27' => 150000, ...]
+     */
+    private function kurangSetoranMapHarian(int $tokoId, string $start, string $end): array
+    {
+        return KurangSetoran::query()
+            ->where('toko_id', $tokoId)
+            ->whereBetween('tanggal', [$start, $end])
+            ->selectRaw('DATE(tanggal) as tgl, SUM(nominal) as total')
+            ->groupBy('tgl')
+            ->pluck('total', 'tgl')
+            ->map(fn($v) => (int)$v)
+            ->toArray();
+    }
+
     // ==============================
     // Totals builder (anti average)
     // ==============================
@@ -290,6 +307,7 @@ class KontribusiHarianTokoService
         $sumGas     = (int) $r->sum('gas_rp');
         $sumTelur   = (int) $r->sum('telur_rp');
         $sumLoss    = (int) $r->sum('loss_bahan');
+        $sumKurang  = (int) $r->sum('kurang_setoran');
         $sumTotal   = (int) $r->sum('total_kontribusi');
 
         return [
@@ -315,6 +333,8 @@ class KontribusiHarianTokoService
 
             'loss_bahan' => $sumLoss,
             'loss_persen' => $this->pctFromSum($sumLoss, $sumSales),
+
+            'kurang_setoran' => $sumKurang,
 
             'total_kontribusi' => $sumTotal,
             'total_persen' => $this->pctFromSum($sumTotal, $sumSales),
@@ -373,6 +393,7 @@ class KontribusiHarianTokoService
 
         $proyeksiHarian = $this->proyeksiMapHarian($tokoId, $start, $end);
         $lossHarian     = $this->lossBahanMapHarian($tokoId, $start, $end);
+        $kurangSetoranHarian = $this->kurangSetoranMapHarian($tokoId, $start, $end);
 
         $rowsOut = [];
 
@@ -398,6 +419,7 @@ class KontribusiHarianTokoService
             $returNow    = $this->applyHppRetur($returNowRaw);
 
             $lossNow = (int) ($lossHarian[$tgl] ?? 0);
+            $kurangSetoranNow = (int) ($kurangSetoranHarian[$tgl] ?? 0);
 
             // =========================================================
             // BY TARGET
@@ -427,7 +449,8 @@ class KontribusiHarianTokoService
                 + (int)$retSel
                 + (int)$gasSel
                 + (int)$telSel
-                - (int)$lossNow;
+                - (int)$lossNow
+                - (int)$kurangSetoranNow;
 
             $rowsOut[] = [
                 'tanggal' => $tgl,
@@ -455,6 +478,7 @@ class KontribusiHarianTokoService
                 'telur_rp'     => (int)$telSel,
 
                 'loss_bahan' => $lossNow,
+                'kurang_setoran' => $kurangSetoranNow,
                 'total_kontribusi' => $totalKontribusiTarget,
             ];
 
@@ -490,7 +514,8 @@ class KontribusiHarianTokoService
                 + (int)$gasRpBL
                 + (int)$telRpBL
                 + (int)$retRpBL
-                - (int)$lossNow;
+                - (int)$lossNow
+                - (int)$kurangSetoranNow;
 
             $rowsOut[] = [
                 'tanggal' => $tgl,
@@ -520,6 +545,7 @@ class KontribusiHarianTokoService
                 'telur_rp'     => (int)$telRpBL,
 
                 'loss_bahan' => $lossNow,
+                'kurang_setoran' => $kurangSetoranNow,
                 'total_kontribusi' => $totalKontribusiBL,
             ];
         }
